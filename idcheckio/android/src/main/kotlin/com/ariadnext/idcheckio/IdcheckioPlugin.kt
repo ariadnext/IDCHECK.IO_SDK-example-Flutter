@@ -112,6 +112,7 @@ class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRe
             onMethodCall(call!!, result!!)
             return true
         }
+        result?.error("PERMISSION_REFUSED", "Some permissions have been refused, disable them or ask again", null)
         return false
     }
 

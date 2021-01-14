@@ -34,8 +34,8 @@ android {
         main.java.srcDirs += 'src/main/kotlin'
     }
     defaultConfig {
-        versionName '5.8.0'
-        versionCode 202011020
+        versionName '5.9.0'
+        versionCode 202101140
         minSdkVersion 21
     }
     lintOptions {
@@ -45,7 +45,7 @@ android {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation('com.ariadnext.android.idcheckio:sdk:5.8.0@aar') {
+    implementation('com.ariadnext.android.idcheckio:sdk:5.9.1@aar') {
         transitive = true
     }
     implementation 'androidx.appcompat:appcompat:1.2.0'

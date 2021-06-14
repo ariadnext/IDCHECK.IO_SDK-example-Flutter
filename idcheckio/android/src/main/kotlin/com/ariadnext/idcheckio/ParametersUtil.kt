@@ -1,6 +1,18 @@
 package com.ariadnext.idcheckio
 
-import com.ariadnext.idcheckio.sdk.bean.*
+import com.ariadnext.idcheckio.sdk.bean.CheckType
+import com.ariadnext.idcheckio.sdk.bean.ConfirmationType
+import com.ariadnext.idcheckio.sdk.bean.DataRequirement
+import com.ariadnext.idcheckio.sdk.bean.DocumentType
+import com.ariadnext.idcheckio.sdk.bean.Extraction
+import com.ariadnext.idcheckio.sdk.bean.FaceDetection
+import com.ariadnext.idcheckio.sdk.bean.FeedbackLevel
+import com.ariadnext.idcheckio.sdk.bean.FileSize
+import com.ariadnext.idcheckio.sdk.bean.Forceable
+import com.ariadnext.idcheckio.sdk.bean.IntegrityCheck
+import com.ariadnext.idcheckio.sdk.bean.Language
+import com.ariadnext.idcheckio.sdk.bean.OnlineConfig
+import com.ariadnext.idcheckio.sdk.bean.Orientation
 import com.ariadnext.idcheckio.sdk.component.IdcheckioView
 import com.ariadnext.idcheckio.sdk.interfaces.cis.CISType
 import org.json.JSONObject
@@ -13,7 +25,9 @@ object ParametersUtil {
                 .docType(DocumentType.valueOf(json.optString(DOCUMENT_TYPE, DocumentType.DISABLED.name)))
                 .orientation(Orientation.valueOf(json.optString(ORIENTATION, Orientation.LANDSCAPE.name)))
                 .confirmType(ConfirmationType.valueOf(json.optString(CONFIRM_TYPE, ConfirmationType.NONE.name)))
-                .readEmrtd(json.optBoolean(READ_EMRTD, false))
+                .integrityCheck(json.optJSONObject(INTEGRITY_CHECK) ?.let {
+                    IntegrityCheck(readEmrtd = it.optBoolean(READ_EMRTD))
+                } ?: IntegrityCheck.none())
                 .useHd(json.optBoolean(USE_HD, false))
                 .scanBothSides(Forceable.valueOf(json.optString(SCAN_BOTH_SIDES, Forceable.DISABLED.name)))
                 .sideOneExtraction(json.optJSONObject(SIDE_1_EXTRACTION)?.let {
@@ -24,6 +38,14 @@ object ParametersUtil {
                     Extraction(codeline = DataRequirement.valueOf(it.optString(DATA_REQUIREMENT, DataRequirement.DISABLED.name)),
                             face = FaceDetection.valueOf(it.optString(FACE_DETECTION, FaceDetection.DISABLED.name)))
                 } ?: Extraction(DataRequirement.DISABLED, FaceDetection.DISABLED))
+                .onlineConfig(json.optJSONObject(ONLINE_CONFIG)?.let {
+                    OnlineConfig(isReferenceDocument = it.optBoolean(IS_REFERENCE_DOC),
+                            checkType = CheckType.valueOf(it.optString(CHECK_TYPE, CheckType.CHECK_FULL.name)),
+                            cisType = it.optString(CIS_TYPE).takeIf { type -> type.isNotEmpty() }?.let { type -> CISType.valueOf(type) },
+                            folderUid = it.optString(FOLDER_UID).takeIf { folder -> folder.isNotEmpty() },
+                            biometricConsent = it.opt(BIOMETRIC_CONSENT)?.takeIf { consent -> consent.toString() != "null" }?.let { consent -> consent as Boolean },
+                            enableManualAnalysis = it.optBoolean(ENABLE_MANUAL_ANALYSIS))
+                } ?: OnlineConfig())
 
         /* Extra parameters (optional) */
         json.opt(LANGUAGE)?.takeIf { it.toString() != "null" }?.let { idcheckioView.language(Language.valueOf(it.toString())) }
@@ -34,16 +56,5 @@ object ParametersUtil {
         json.opt(TOKEN)?.takeIf { it.toString() != "null" }?.let { idcheckioView.token(it.toString()) }
         json.opt(CONFIRM_ABORT)?.takeIf { it.toString() != "null" }?.let { idcheckioView.confirmAbort(it as Boolean) }
         return idcheckioView
-    }
-
-    fun getCisContextFromJson(jsonString: String?): CISContext {
-        jsonString?.takeIf { it != "null" } ?: return CISContext(null,null, null)
-        val json = JSONObject(jsonString)
-        val folderUid = json.optString(folderUid).takeIf { it.isNotEmpty() }
-        val referenceDocUid = json.optString(referenceDocUid).takeIf { it.isNotEmpty() }
-        val referenceTaskUid = json.optString(referenceTaskUid).takeIf { it.isNotEmpty() }
-        val cisType = json.optString(cisType).takeIf { it.isNotEmpty() }?.let { CISType.valueOf(it) }
-        val biometricConsent = if(json.has(biometricConsent)) json.getBoolean(biometricConsent) else null
-        return CISContext(folderUid, referenceTaskUid, referenceDocUid, cisType, biometricConsent)
     }
 }

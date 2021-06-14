@@ -5,15 +5,14 @@ class ParamsListItem {
   IDCheckioParams params;
   bool isOnline;
   bool upload = false;
-  CISType cisType;
 
   ParamsListItem(this.name, this.params, this.isOnline);
 }
 
 final IDCheckioParams paramsID = IDCheckioParams(IDCheckioParamsBuilder()
   ..docType = DocumentType.ID
-  ..orientation = IDCheckioOrientation.LANDSCAPE
-  ..readEmrtd = true
+  ..orientation = IDCheckioOrientation.PORTRAIT
+  ..integrityCheck = IntegrityCheck(readEmrtd: true)
   ..useHd = false
   ..confirmationType = ConfirmationType.DATA_OR_PICTURE
   ..scanBothSides = ScanBothSides.ENABLED
@@ -24,11 +23,12 @@ final IDCheckioParams paramsID = IDCheckioParams(IDCheckioParamsBuilder()
   ..maxPictureFilesize = FileSize.TWO_MEGA_BYTES
   ..feedbackLevel = FeedbackLevel.ALL
   ..adjustCrop = false
-  ..confirmAbort = false);
+  ..confirmAbort = false
+  ..onlineConfig = OnlineConfig(checkType: CheckType.CHECK_FAST, isReferenceDocument: true));
 
 final IDCheckioParams paramsIDAnalyze = IDCheckioParams(IDCheckioParamsBuilder()
   ..docType = DocumentType.ID
-  ..orientation = IDCheckioOrientation.LANDSCAPE
+  ..orientation = IDCheckioOrientation.PORTRAIT
   ..useHd = false
   ..confirmationType = ConfirmationType.DATA_OR_PICTURE
   ..scanBothSides = ScanBothSides.ENABLED
@@ -44,7 +44,7 @@ final IDCheckioParams paramsLiveness = IDCheckioParams(IDCheckioParamsBuilder()
 final IDCheckioParams paramsFrenchHealthCard = IDCheckioParams(IDCheckioParamsBuilder()
   ..docType = DocumentType.FRENCH_HEALTH_CARD
   ..confirmationType = ConfirmationType.DATA_OR_PICTURE
-  ..orientation = IDCheckioOrientation.LANDSCAPE);
+  ..orientation = IDCheckioOrientation.PORTRAIT);
 
 final IDCheckioParams paramsSelfie = IDCheckioParams(IDCheckioParamsBuilder()
   ..docType = DocumentType.SELFIE
@@ -55,23 +55,26 @@ final IDCheckioParams paramsAddressProof = IDCheckioParams(IDCheckioParamsBuilde
   ..docType = DocumentType.A4
   ..confirmationType = ConfirmationType.DATA_OR_PICTURE
   ..orientation = IDCheckioOrientation.PORTRAIT
-  ..useHd = true);
+  ..useHd = true
+  ..onlineConfig = OnlineConfig(cisType: CISType.ADDRESS_PROOF));
 
 final IDCheckioParams paramsVehicleRegistration = IDCheckioParams(IDCheckioParamsBuilder()
   ..docType = DocumentType.VEHICLE_REGISTRATION
   ..confirmationType = ConfirmationType.DATA_OR_PICTURE
-  ..orientation = IDCheckioOrientation.LANDSCAPE
+  ..orientation = IDCheckioOrientation.PORTRAIT
   ..sideOneExtraction = Extraction(Codeline.DECODED, FaceDetection.DISABLED));
 
 final IDCheckioParams paramsIban = IDCheckioParams(IDCheckioParamsBuilder()
   ..docType = DocumentType.PHOTO
   ..confirmationType = ConfirmationType.DATA_OR_PICTURE
   ..orientation = IDCheckioOrientation.PORTRAIT
-  ..useHd = true);
+  ..useHd = true
+  ..onlineConfig = OnlineConfig(cisType: CISType.IBAN));
 
 final IDCheckioParams paramsAttachment = IDCheckioParams(IDCheckioParamsBuilder()
   ..docType = DocumentType.PHOTO
   ..confirmationType = ConfirmationType.DATA_OR_PICTURE
   ..orientation = IDCheckioOrientation.PORTRAIT
   ..useHd = true
-  ..adjustCrop = true);
+  ..adjustCrop = true
+  ..onlineConfig = OnlineConfig(cisType: CISType.OTHER));

@@ -1,16 +1,16 @@
 name: idcheckio
 description: An IDCheck.io Sdk Flutter plugin.
-version: 5.9.0
+version: 6.0.0
 author: team-mobile@ariadnext.com
 homepage: https://www.ariadnext.com/
 
 environment:
-  sdk: ">=2.7.0 <3.0.0"
-  flutter: ">=1.20.0 <2.0.0"
+  sdk: '>=2.12.0 <3.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
+  collection: ^1.15.0-nullsafety.4
 
 dev_dependencies:
   flutter_test:

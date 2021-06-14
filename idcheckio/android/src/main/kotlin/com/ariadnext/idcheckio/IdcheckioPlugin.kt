@@ -4,9 +4,9 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.AsyncTask
 import android.util.Log
 import androidx.annotation.NonNull
+import com.ariadnext.idcheckio.sdk.bean.OnlineContext
 import com.ariadnext.idcheckio.sdk.bean.SdkEnvironment
 import com.ariadnext.idcheckio.sdk.component.Idcheckio
 import com.ariadnext.idcheckio.sdk.interfaces.ErrorMsg
@@ -26,7 +26,7 @@ import io.flutter.plugin.common.PluginRegistry
 import io.flutter.plugin.common.PluginRegistry.Registrar
 
 /** IdcheckioPlugin */
-class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry.ActivityResultListener, PluginRegistry.RequestPermissionsResultListener {
+class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry.ActivityResultListener {
     private lateinit var context: Context
     private lateinit var activity: Activity
     private var result: Result? = null
@@ -40,12 +40,11 @@ class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRe
             ACTIVATE -> {
                 this.call = call
                 Idcheckio.activate(
-                        licenseFilename = call.argument<String>(LICENSE) ?: "",
+                        licenseFilename = call.argument<String?>(LICENSE) ?: "",
                         activity = activity,
                         callback = idcheckioCallback,
-                        disableAudioForLiveness = call.argument<Boolean>(DISABLE_AUDIO) ?: true,
-                        disableImeiForActivation = call.argument<Boolean>(DISABLE_IMEI) ?: false,
-                        environment = SdkEnvironment.valueOf(call.argument<String>(ENVIRONMENT) ?: "PROD"),
+                        disableAudioForLiveness = call.argument<Boolean?>(DISABLE_AUDIO) ?: true,
+                        environment = SdkEnvironment.valueOf(call.argument<String?>(ENVIRONMENT) ?: "PROD"),
                         extractData = call.argument<Boolean>(EXTRACT_DATA) ?: true
                 )
             }
@@ -57,17 +56,17 @@ class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRe
             }
             START_ONLINE -> {
                 val intent = Intent(activity, IDCheckioActivity::class.java)
-                intent.putExtra("PARAMS", call.argument<String>(PARAMS).toString())
-                intent.putExtra("CIS", call.argument<String>(CIS_CONTEXT).toString())
+                intent.putExtra("PARAMS", call.argument<String?>(PARAMS).toString())
+                call.argument<String?>(ONLINE_CONTEXT)?.let { intent.putExtra("ONLINE", it) }
                 intent.putExtra("isOnline", true)
                 activity.startActivityForResult(intent, START_ONLINE_REQUEST)
             }
             ANALYZE -> {
-                val params = ParametersUtil.getIDCheckioViewFromCall(call.argument<String>(PARAMS).toString()).captureParams()
-                val isOnline = call.argument<Boolean>(IS_ONLINE) ?: false
-                val cisContext = if(isOnline) ParametersUtil.getCisContextFromJson(call.argument<String>(CIS_CONTEXT).toString()) else null
-                var side1Uri = call.argument<String>(SIDE_1_URI)
-                var side2Uri = call.argument<String>(SIDE_2_URI)
+                val params = ParametersUtil.getIDCheckioViewFromCall(call.argument<String?>(PARAMS).toString()).captureParams()
+                val isOnline = call.argument<Boolean?>(IS_ONLINE) ?: false
+                val onlineContext = if(isOnline) OnlineContext.createFrom(call.argument<String?>(ONLINE_CONTEXT).toString()) else null
+                var side1Uri = call.argument<String?>(SIDE_1_URI)
+                var side2Uri = call.argument<String?>(SIDE_2_URI)
                 //We can't access an internal file if the URI doesn't start by file://
                 side1Uri?.let {
                     if(it.startsWith("/data")){
@@ -79,17 +78,15 @@ class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRe
                         side2Uri = "file://$side2Uri"
                     }
                 }
-                AsyncTask.execute {
-                    Idcheckio.analyze(
-                            context = context,
-                            captureParams = params,
-                            callback = idcheckioInteractionInterface,
-                            cisContext = cisContext,
-                            isOnline = isOnline,
-                            side1ToUpload = Uri.parse(side1Uri),
-                            side2ToUpload = side2Uri?.let { Uri.parse(it) }
-                    )
-                }
+                Idcheckio.analyze(
+                        context = context,
+                        captureParams = params,
+                        callback = idcheckioInteractionInterface,
+                        onlineContext = onlineContext,
+                        isOnline = isOnline,
+                        side1ToUpload = Uri.parse(side1Uri),
+                        side2ToUpload = side2Uri?.let { Uri.parse(it) }
+                )
             }
             else -> result.notImplemented()
         }
@@ -104,15 +101,6 @@ class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRe
             }
             return true
         }
-        return false
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray): Boolean {
-        if(Idcheckio.verifyPermissions(requestCode, permissions, grantResults)){
-            onMethodCall(call!!, result!!)
-            return true
-        }
-        result?.error("PERMISSION_REFUSED", "Some permissions have been refused, disable them or ask again", null)
         return false
     }
 
@@ -196,7 +184,6 @@ class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRe
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
         binding.addActivityResultListener(this)
-        binding.addRequestPermissionsResultListener(this)
     }
 
     override fun onDetachedFromActivityForConfigChanges() {

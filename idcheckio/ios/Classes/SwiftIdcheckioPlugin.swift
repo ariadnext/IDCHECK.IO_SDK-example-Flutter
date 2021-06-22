@@ -3,13 +3,15 @@ import UIKit
 import IDCheckIOSDK
 
 public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
-    var idcheckioDelegate = IdcheckioFlutterDelegate()
-    private var result: FlutterResult?
-    let ACTIVATE = "activate"
-    let START = "start"
-    let START_ONLINE = "startOnline"
-    let ANALYZE = "analyze"
-
+    private var flutterResult: FlutterResult?
+    
+    enum apiMethod: String {
+        case activate
+        case start
+        case startOnline
+        case analyze
+    }
+    
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "idcheckio", binaryMessenger: registrar.messenger())
         let instance = SwiftIdcheckioPlugin()
@@ -17,14 +19,14 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
     }
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        Idcheckio.shared.delegate = idcheckioDelegate
-        self.result = result
+        guard let method = apiMethod(rawValue: call.method) else { fatalError("unable to parse FlutterMethodCall")}
+        self.flutterResult = result
         guard let args: [String: Any] = call.arguments as? [String : Any] else {
             result("iOS could not recognize flutter arguments in method: (sendParams)")
             return
         }
-        switch call.method {
-        case ACTIVATE:
+        switch method {
+        case .activate:
             let licenceFilename : String = args["license"] as? String ?? ""
             let disableAudioForLiveness : Bool = args["disableAudioForLiveness"] as? Bool ?? true
             let environment : SDKEnvironment = SDKEnvironment.init(rawValue: (args["environment"] as? String ?? "PROD").lowercased()) ?? .prod
@@ -39,25 +41,18 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
                     result(nil)
                 }
             }
-            break;
-        case START:
-            idcheckioDelegate.result = result
+        case .start:
             let params: SDKParams = parseParameters(params: args)
             try? Idcheckio.shared.setParams(params)
             launchSession(online: false)
-            break;
-        case START_ONLINE:
-            idcheckioDelegate.result = result
+        case .startOnline:
             let params: SDKParams = parseParameters(params: args["params"] as? [String : Any])
             try? Idcheckio.shared.setParams(params)
-            let context = parseCisContext(params: args["cisContext"] as? [String : Any])
-            launchSession(online: true, cisContext: context)
-            break;
-        case ANALYZE:
-            idcheckioDelegate.result = result
+            launchSession(online: true, onlineContext: OnlineContext.from(json: args["onlineContext"] as? String ?? ""))
+        case .analyze:
             let params: SDKParams = parseParameters(params: args["params"] as? [String : Any])
             try? Idcheckio.shared.setParams(params)
-            let context = parseCisContext(params: args["cisContext"] as? [String : Any])
+            let onlineContext = OnlineContext.from(json: args["onlineContext"] as? String ?? "")
             let side1 = args["side1Uri"] as! String
             let side2 = args["side2Uri"] as? String
             let uiImage1 = UIImage(contentsOfFile: side1)!
@@ -66,16 +61,14 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
                 uiImage2 = UIImage(contentsOfFile: side2!)
             }
             let isOnline = args["isOnline"] as? Bool ?? false
+            let sessionType: AnalyzeSessionType = isOnline == true ? .online(context: onlineContext) : .offline
             DispatchQueue.main.async {
-                Idcheckio.shared.analyze(params: params, side1Image: uiImage1, side2Image: uiImage2, online: isOnline, cisContext: context)
+                Idcheckio.shared.analyze(side1Image: uiImage1, side2Image: uiImage2, sessionType: sessionType)
             }
-            break;
-        default:
-            result(FlutterMethodNotImplemented)
         }
     }
     
-    func parseParameters(params : [String: Any]?) -> SDKParams{
+    func parseParameters(params : [String: Any?]?) -> SDKParams{
         let sdkParams = SDKParams()
         guard let params = params else {
             return sdkParams
@@ -97,109 +90,59 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
         extractionSide2.codeline = Extraction.DataRequirement(rawValue: (side2["DataRequirement"] as! String)) ?? .disabled
         extractionSide2.face = Extraction.FaceDetection(rawValue: (side2["FaceDetection"] as! String)) ?? .disabled
         sdkParams.side2Extraction = extractionSide2
-        
-        if let language = (params["Language"] as! String).checkNotNull(){
-            Idcheckio.shared.extraParameters.language = Language(rawValue: language)
-        }
-        if let feedbackLevel = (params["FeedbackLevel"] as! String).checkNotNull(){
-            Idcheckio.shared.extraParameters.feedbackLevel = FeedbackLevel(rawValue: feedbackLevel)!
-        }
-        if let maxPictureFilesize = (params["MaxPictureFilesize"] as! String).checkNotNull(){
-            Idcheckio.shared.extraParameters.maxPictureFilesize = FileSize(rawValue: maxPictureFilesize)
-        }
-        if let token = params["Token"] as? String {
-            Idcheckio.shared.extraParameters.token = token
-        }
-        if let adjustCrop = params["AdjustCrop"] as? Bool {
-            Idcheckio.shared.extraParameters.adjustCrop = adjustCrop
-        }
-        if let confirmAbort = params["ConfirmAbort"] as? Bool {
-            Idcheckio.shared.extraParameters.confirmAbort = confirmAbort
-        }
+        Idcheckio.shared.extraParameters.language = Language(rawValue: params["Language"] as? String ?? "")
+        Idcheckio.shared.extraParameters.feedbackLevel = FeedbackLevel(rawValue: params["FeedbackLevel"] as? String ?? "") ?? .all
+        Idcheckio.shared.extraParameters.maxPictureFilesize = FileSize(rawValue: params["MaxPictureFilesize"] as? String ?? "")
+        Idcheckio.shared.extraParameters.token = params["Token"] as? String
+        Idcheckio.shared.extraParameters.adjustCrop = params["AdjustCrop"] as? Bool ?? false
+        Idcheckio.shared.extraParameters.confirmAbort = params["ConfirmAbort"] as? Bool ?? false
+        let onlineConfigParams = params["OnlineConfig"] as! [String: Any?]
+        let onlineConfig = OnlineConfig()
+        onlineConfig.isReferenceDocument = (onlineConfigParams["isReferenceDocument"] as? Bool) ?? false
+        onlineConfig.checkType = CheckType(rawValue: onlineConfigParams["checkType"] as?  String ?? "") ?? .checkFull
+        onlineConfig.cisType = CISDocumentType(rawValue: onlineConfigParams["cisType"] as? String ?? "") ?? nil
+        onlineConfig.folderUid = (onlineConfigParams["folderUid"] as? String) ?? nil
+        onlineConfig.biometricConsent = (onlineConfigParams["biometricConsent"] as? Bool) ?? nil
+        onlineConfig.enableManualAnalysis = (onlineConfigParams["enableManualAnalysis"] as? Bool) ?? false
+        sdkParams.onlineConfig = onlineConfig
         return sdkParams
     }
-    
-    func parseCisContext(params : [String: Any]?) -> CISContext{
-        let cisContext = CISContext()
-        guard let params = params else {
-            return cisContext
-        }
-        if let folderUid = params["folderUid"] as? String{
-            cisContext.folderUid = folderUid
-        }
-        if let referenceTaskUid = params["referenceTaskUid"] as? String{
-            cisContext.referenceTaskUid = referenceTaskUid
-        }
-        if let referenceDocUid = params["referenceDocUid"] as? String{
-            cisContext.referenceDocUid = referenceDocUid
-        }
-        if let biometricConsent = params["biometricConsent"] as? Bool{
-            cisContext.biometricConsent = biometricConsent
-        }
-        if let cisType = params["cisType"] as? String{
-            cisContext.cisType = IDCheckIOSDK.CISDocumentType.init(rawValue: cisType)
-        }
-        return cisContext
-    }
 
-    func launchSession(online: Bool, cisContext: CISContext? = nil) {
+    func startCompletion(error: Error?) {
         let rootViewController = UIApplication.shared.windows.first?.rootViewController
-        DispatchQueue.main.async { [weak rootViewController, online] in
-            let viewController = UIViewController()
-            viewController.modalPresentationStyle = .fullScreen
-
-            let cameraView = IdcheckioView(frame: .zero)
-
-            cameraView.translatesAutoresizingMaskIntoConstraints = false
-            viewController.view.frame = rootViewController?.view.frame ?? .zero
-            viewController.view.addSubview(cameraView)
-            viewController.view.backgroundColor = UIColor.black
-            cameraView.leadingAnchor.constraint(equalTo: viewController.view.leadingAnchor).isActive = true
-            cameraView.trailingAnchor.constraint(equalTo: viewController.view.trailingAnchor).isActive = true
-            cameraView.topAnchor.constraint(equalTo: viewController.view.topAnchor).isActive = true
-            cameraView.bottomAnchor.constraint(equalTo: viewController.view.bottomAnchor).isActive = true
-
-            rootViewController?.present(viewController, animated: true, completion: { [rootViewController, cameraView, online] in
-                if online {
-                    Idcheckio.shared.startOnline(with: cameraView, cisContext: cisContext, completion: { [weak rootViewController] (error) in
-                        if let error = error as? IdcheckioError{
-                            rootViewController?.dismiss(animated: true)
-                            self.result!(FlutterError(code: "CAPTURE_FAILED", message: error.toJson(), details: nil))
-                        }
-                    })
-                } else {
-                    Idcheckio.shared.start(with: cameraView, completion: { [weak rootViewController] (error) in
-                        if let error = error as? IdcheckioError{
-                            rootViewController?.dismiss(animated: true)
-                            self.result!(FlutterError(code: "CAPTURE_FAILED", message: error.toJson(), details: nil))
-                        }
-                    })
-                }
-            })
+        if let error = error as? IdcheckioError{
+            rootViewController?.dismiss(animated: true)
+            self.flutterResult?(FlutterError(code: "CAPTURE_FAILED", message: error.toJson(), details: nil))
         }
     }
     
-    @objc class IdcheckioFlutterDelegate : NSObject, IdcheckioDelegate {
-        var result: FlutterResult?
-        func idcheckioFinishedWithResult(_ idcheckioResult: IdcheckioResult?, error: Error?) {
-            let rootViewController = UIApplication.shared.windows.first?.rootViewController
-            rootViewController?.dismiss(animated: true)
-            var jsonResult = ""
-            if let idcheckioResult = idcheckioResult {
-                jsonResult += "{\"result\":" + idcheckioResult.toJson()
+    func resultCompletion(result: (Result<IdcheckioResult?, Error>)) {
+        let rootViewController = UIApplication.shared.windows.first?.rootViewController
+        rootViewController?.dismiss(animated: true)
+        var jsonResult = ""
+        switch result {
+        case .success(let result):
+            if let result = result {
+                jsonResult += result.toJson()
             }
+        case .failure(let error):
             if let error = error as? IdcheckioError {
-                if jsonResult.isEmpty {
-                    result!(FlutterError(code: "CAPTURE_FAILED", message: error.toJson(), details: nil))
-                } else {
-                    jsonResult += ", \"error\":" + error.toJson()
-                }
+                flutterResult?(FlutterError(code: "CAPTURE_FAILED", message: error.toJson(), details: nil))
             }
-            result!(jsonResult + "}")
         }
+        flutterResult?(jsonResult)
+    }
+    
+    func launchSession(online: Bool, onlineContext: OnlineContext? = nil) {
+        let rootViewController = UIApplication.shared.windows.first?.rootViewController
+        DispatchQueue.main.async { [online] in
 
-        func idcheckioDidSendEvent(interaction: IdcheckioInteraction, msg: IdcheckioMsg?) {
-            //Nothing to do...
+            let idcheckkioViewController = IdcheckioViewController()
+            idcheckkioViewController.onlineContext = onlineContext
+            idcheckkioViewController.isOnlineSession = online
+            idcheckkioViewController.startCompletion = self.startCompletion(error:)
+            idcheckkioViewController.resultCompletion = self.resultCompletion(result:)
+            rootViewController?.present(idcheckkioViewController, animated: true, completion: nil)
         }
     }
 }
@@ -210,14 +153,6 @@ extension String {
         let regex = try? NSRegularExpression(pattern: pattern, options: [])
         let range = NSRange(location: 0, length: self.count)
         return (regex?.stringByReplacingMatches(in: self, options: [], range: range, withTemplate: "$1_$2").lowercased())!
-    }
-    
-    func checkNotNull() -> String? {
-        if(self != "" || self != "null"){
-            return nil
-        } else {
-            return self
-        }
     }
 }
 

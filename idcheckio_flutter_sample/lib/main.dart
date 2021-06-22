@@ -66,13 +66,15 @@ class _MyAppState extends State<MyApp> {
       if (_selectedItem.upload) {
         // Analyze mode
         ImagePicker imagePicker = ImagePicker();
-        PickedFile pickedFile = await (imagePicker.getImage(source: ImageSource.gallery) as FutureOr<PickedFile>);
-        result = await IDCheckio.analyze(
-            params: _selectedItem.params,
-            side1Uri: pickedFile.path,
-            side2uri: null,
-            isOnline: _selectedItem.isOnline,
-            onlineContext: _captureResult?.onlineContext);
+        final pickedFile = await (imagePicker.getImage(source: ImageSource.gallery));
+        if (pickedFile != null) {
+          result = await IDCheckio.analyze(
+              params: _selectedItem.params,
+              side1Uri: pickedFile.path,
+              side2uri: null,
+              isOnline: _selectedItem.isOnline,
+              onlineContext: _captureResult?.onlineContext);
+        }
       } else {
         // Capture mode
         if (_selectedItem.isOnline) {
@@ -81,7 +83,7 @@ class _MyAppState extends State<MyApp> {
           result = await IDCheckio.start(_selectedItem.params);
         }
       }
-      debugPrint('ID Capture Successful : ${result.toJson()}', wrapWidth: 500);
+      debugPrint('ID Capture Successful : ${result!.toJson()}', wrapWidth: 500);
     } on PlatformException catch (e) {
       debugPrint("An error happened during the capture : ${e.code} - ${e.message}");
     }

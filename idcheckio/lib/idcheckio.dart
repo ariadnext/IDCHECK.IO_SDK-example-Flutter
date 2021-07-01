@@ -7,13 +7,12 @@ import 'package:flutter/services.dart';
 class IDCheckio {
   static const MethodChannel _channel = const MethodChannel('idcheckio');
 
-  static Future<void> activate({required String licenceFilename, required Environment environment, bool? disableAudioForLiveness, bool? disableImeiForActivation, bool? extractData}) async {
+  static Future<void> activate({required String licenceFilename, required Environment environment, bool? disableAudioForLiveness, bool? extractData}) async {
     try {
       await _channel.invokeMethod('activate', <String, dynamic>{
         'license': licenceFilename,
         'environment': environment.name(),
         'disableAudioForLiveness': disableAudioForLiveness,
-        'disableImeiForActivation': disableImeiForActivation,
         'extractData': extractData
       });
     } on PlatformException catch (e) {

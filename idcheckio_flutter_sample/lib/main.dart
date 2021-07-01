@@ -47,7 +47,6 @@ class _MyAppState extends State<MyApp> {
           licenceFilename: "license",
           environment: Environment.DEMO,
           disableAudioForLiveness: true,
-          disableImeiForActivation: true,
           extractData: true);
       activationStatus = true;
     } on PlatformException catch (e) {

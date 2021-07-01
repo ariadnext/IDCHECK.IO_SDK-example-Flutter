@@ -24,10 +24,10 @@ Then do a `flutter pub get` to install the dependency.
 
 1. In your project folder, go to your iOS directory and open the Podfile :
  - Change the minimum version to at least '10.0' on the top of the file
- ```
- # Uncomment this line to define a global platform for your project
- platform :ios, '10.0'
- ```
+```
+# Uncomment this line to define a global platform for your project
+platform :ios, '10.0'
+```
  - Add the following lines above the `target`section :
 ```
 source 'https://github.com/CocoaPods/Specs.git'
@@ -72,7 +72,7 @@ import 'package:idcheckio/idcheckio.dart';
 Future<void> activate() async {
     String activationStatus;
     try {
-      await IDCheckio.activate(licenceFilename: "license", environment: Environment.DEMO, disableAudioForLiveness: true, disableImeiForActivation: false, extractData: true);
+      await IDCheckio.activate(licenceFilename: "license", environment: Environment.DEMO, disableAudioForLiveness: true, extractData: true);
       activationStatus = "The sdk is activated !";
     } on PlatformException catch (e){
       activationStatus = "Sdk activation failed : ${e.code} - ${e.message}";
@@ -88,21 +88,21 @@ Future<void> activate() async {
 ```java
   final IDCheckioParams paramsID = IDCheckioParams(
     IDCheckioParamsBuilder()
-          ..docType = DocumentType.ID
-          ..orientation = IDCheckioOrientation.LANDSCAPE
-          ..readEmrtd = true
-          ..useHd = false
-          ..confirmationType = ConfirmationType.DATA_OR_PICTURE
-          ..scanBothSides = ScanBothSides.ENABLED
-          ..sideOneExtraction = Extraction(Codeline.VALID, FaceDetection.ENABLED)
-          ..sideTwoExtraction = Extraction(Codeline.REJECT, FaceDetection.DISABLED)
-          ..language = Language.fr
-          ..manualButtonTimer = 10
-          ..maxPictureFilesize = FileSize.TWO_MEGA_BYTES
-          ..feedbackLevel = FeedbackLevel.ALL
-          ..adjustCrop = false
-          ..confirmAbort = false
-  );
+      ..docType = DocumentType.ID
+      ..orientation = IDCheckioOrientation.PORTRAIT
+      ..integrityCheck = IntegrityCheck(readEmrtd: true)
+      ..useHd = false
+      ..confirmationType = ConfirmationType.DATA_OR_PICTURE
+      ..scanBothSides = ScanBothSides.ENABLED
+      ..sideOneExtraction = Extraction(Codeline.VALID, FaceDetection.ENABLED)
+      ..sideTwoExtraction = Extraction(Codeline.REJECT, FaceDetection.DISABLED)
+      ..language = Language.fr
+      ..manualButtonTimer = 10
+      ..maxPictureFilesize = FileSize.TWO_MEGA_BYTES
+      ..feedbackLevel = FeedbackLevel.ALL
+      ..adjustCrop = false
+      ..confirmAbort = false
+      ..onlineConfig = OnlineConfig(checkType: CheckType.CHECK_FAST, isReferenceDocument: true));
 
   Future<void> capture(IDCheckioParams params) async{
     String capture;
@@ -128,10 +128,10 @@ Future<void> activate() async {
             ..confirmAbort = true
   );
 
-  Future<void> capture(IDCheckioParams params) async{
+  Future<void> capture(IDCheckioParams params, IDCheckioResult? result) async{
     String capture;
     try {
-      _idCheckioResult = await IDCheckio.startOnline(params, getCisContext(null));
+      _idCheckioResult = await IDCheckio.startOnline(params, result?.onlineContext);
       capture = 'OK !';
     } on PlatformException catch(e) {
       capture = 'An error happened during the capture : ${e.message}';
@@ -141,29 +141,23 @@ Future<void> activate() async {
       _capture = capture;
     });
   }
-
-  CISContext getCisContext(CISType cisType){
-    CISContext cisContext = CISContext();
-    if(_idCheckioResult != null){
-      cisContext
-        ..folderUid = _idCheckioResult.folderUid
-        ..referenceDocUid = _idCheckioResult.documentUid
-        ..referenceTaskUid = _idCheckioResult.taskUid;
-    }
-    cisContext..cisType = cisType;
-    return cisContext;
-  }
 ```
 
 5. If you don't want to capture but just analyze a document, you can use the `analyze()` method. You will receive the result in an `IdcheckioResult` object.
 ```java  
-Future<void> analyze(IDCheckioParams params) async{
+Future<void> analyze(IDCheckioParams params, IDCheckioResult? result) async{
     String capture;
     try {
       ImagePicker imagePicker = ImagePicker();
-      PickedFile pickedFile = await imagePicker.getImage(source: ImageSource.gallery);
-      _idCheckioResult = await IDCheckio.analyze(params: paramsID, side1Uri: pickedFile.path, side2uri:
-        null, isOnline: params.isOnline, cisContext: getCisContext(null));
+      inal pickedFile = await (imagePicker.getImage(source: ImageSource.gallery));
+      if (pickedFile != null) {
+        result = await IDCheckio.analyze(
+          params: params,
+          side1Uri: pickedFile.path,
+          side2uri: null,
+          isOnline: true,
+          onlineContext: result?.onlineContext);
+      }
       capture = 'OK !';
     } on PlatformException catch(e) {
       capture = 'An error happened during the capture : ${e.message}';

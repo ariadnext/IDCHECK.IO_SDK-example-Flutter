@@ -3,6 +3,7 @@ import UIKit
 import IDCheckIOSDK
 
 public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
+    var idcheckioDelegate = IdcheckioFlutterDelegate()
     private var flutterResult: FlutterResult?
     
     enum apiMethod: String {
@@ -52,6 +53,8 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
         case .analyze:
             let params: SDKParams = parseParameters(params: args["params"] as? [String : Any])
             try? Idcheckio.shared.setParams(params)
+            Idcheckio.shared.delegate = idcheckioDelegate
+            idcheckioDelegate.flutterResult = flutterResult
             let onlineContext = OnlineContext.from(json: args["onlineContext"] as? String ?? "")
             let side1 = args["side1Uri"] as! String
             let side2 = args["side2Uri"] as? String
@@ -143,6 +146,27 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
             idcheckkioViewController.startCompletion = self.startCompletion(error:)
             idcheckkioViewController.resultCompletion = self.resultCompletion(result:)
             rootViewController?.present(idcheckkioViewController, animated: true, completion: nil)
+        }
+    }
+
+    @objc class IdcheckioFlutterDelegate : NSObject, IdcheckioDelegate {
+        var flutterResult: FlutterResult?
+        func idcheckioFinishedWithResult(_ idcheckioResult: IdcheckioResult?, error: Error?) {
+            var jsonResult = ""
+            if let idcheckioResult = idcheckioResult {
+                jsonResult += idcheckioResult.toJson()
+            }
+            else if let error = error as? IdcheckioError {
+                if jsonResult.isEmpty {
+                    flutterResult!(FlutterError(code: "CAPTURE_FAILED", message: error.toJson(), details: nil))
+                } else {
+                    jsonResult += error.toJson()
+                }
+            }
+            flutterResult!(jsonResult)
+        }
+        func idcheckioDidSendEvent(interaction: IdcheckioInteraction, msg: IdcheckioMsg?) {
+            //Nothing to do...jsonResult    String
         }
     }
 }

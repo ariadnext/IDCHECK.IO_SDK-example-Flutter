@@ -53,7 +53,6 @@ object ParametersUtil {
         json.opt(FEEDBACK_LEVEL)?.takeIf { it.toString() != "null" }?.let { idcheckioView.feedbackLevel(FeedbackLevel.valueOf(it.toString())) }
         json.opt(ADJUST_CROP)?.takeIf { it.toString() != "null" }?.let { idcheckioView.adjustCrop(it as Boolean) }
         json.opt(MAX_PICTURE_FILESIZE)?.takeIf { it.toString() != "null" }?.let { idcheckioView.maxPictureFilesize(FileSize.valueOf(it.toString())) }
-        json.opt(TOKEN)?.takeIf { it.toString() != "null" }?.let { idcheckioView.token(it.toString()) }
         json.opt(CONFIRM_ABORT)?.takeIf { it.toString() != "null" }?.let { idcheckioView.confirmAbort(it as Boolean) }
         return idcheckioView
     }

@@ -96,18 +96,16 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
         Idcheckio.shared.extraParameters.language = Language(rawValue: params["Language"] as? String ?? "")
         Idcheckio.shared.extraParameters.feedbackLevel = FeedbackLevel(rawValue: params["FeedbackLevel"] as? String ?? "") ?? .all
         Idcheckio.shared.extraParameters.maxPictureFilesize = FileSize(rawValue: params["MaxPictureFilesize"] as? String ?? "")
-        Idcheckio.shared.extraParameters.token = params["Token"] as? String
         Idcheckio.shared.extraParameters.adjustCrop = params["AdjustCrop"] as? Bool ?? false
         Idcheckio.shared.extraParameters.confirmAbort = params["ConfirmAbort"] as? Bool ?? false
         let onlineConfigParams = params["OnlineConfig"] as! [String: Any?]
-        let onlineConfig = OnlineConfig()
+        let onlineConfig = sdkParams.onlineConfig
         onlineConfig.isReferenceDocument = (onlineConfigParams["isReferenceDocument"] as? Bool) ?? false
         onlineConfig.checkType = CheckType(rawValue: onlineConfigParams["checkType"] as?  String ?? "") ?? .checkFull
         onlineConfig.cisType = CISDocumentType(rawValue: onlineConfigParams["cisType"] as? String ?? "") ?? nil
         onlineConfig.folderUid = (onlineConfigParams["folderUid"] as? String) ?? nil
         onlineConfig.biometricConsent = (onlineConfigParams["biometricConsent"] as? Bool) ?? nil
         onlineConfig.enableManualAnalysis = (onlineConfigParams["enableManualAnalysis"] as? Bool) ?? false
-        sdkParams.onlineConfig = onlineConfig
         return sdkParams
     }
 

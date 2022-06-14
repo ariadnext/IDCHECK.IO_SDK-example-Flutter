@@ -5,35 +5,63 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Window
 import androidx.fragment.app.FragmentActivity
+import com.ariadnext.idcheckio.sdk.bean.IpsCustomization
 import com.ariadnext.idcheckio.sdk.bean.OnlineContext
+import com.ariadnext.idcheckio.sdk.component.Idcheckio
+import com.ariadnext.idcheckio.sdk.component.IdcheckioView
 import com.ariadnext.idcheckio.sdk.interfaces.ErrorMsg
-import com.ariadnext.idcheckio.sdk.interfaces.IdcheckioError
 import com.ariadnext.idcheckio.sdk.interfaces.IdcheckioInteraction
 import com.ariadnext.idcheckio.sdk.interfaces.IdcheckioInteractionInterface
 import com.ariadnext.idcheckio.sdk.interfaces.result.IdcheckioResult
-import com.ariadnext.idcheckio.sdk.utils.toJson
+import com.ariadnext.idcheckio.sdk.interfaces.result.ips.IpsResultCallback
+import com.ariadnext.idcheckio.sdk.utils.extension.toJson
 
-class IDCheckioActivity : FragmentActivity(), IdcheckioInteractionInterface {
-    private var isOnline = false
+class IDCheckioActivity : FragmentActivity(), IdcheckioInteractionInterface, IpsResultCallback {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         setContentView(R.layout.activity_idcheckio)
         val intent = intent
-        isOnline = intent.getBooleanExtra("isOnline", false)
-        val idcheckioView = ParametersUtil.getIDCheckioViewFromCall(intent.getStringExtra("PARAMS")!!)
-                .listener(this)
-                .build()
-        supportFragmentManager.beginTransaction().replace(R.id.idcheckio_container, idcheckioView).commit()
-        if(isOnline){
-            val onlineContext = intent.getStringExtra("ONLINE")?.let {
-                OnlineContext.createFrom(it)
+        val isOnline = intent.getBooleanExtra("isOnline", false)
+        val isIps =  intent.getBooleanExtra("isIps", false)
+        when {
+            isIps -> {
+                val folderUid = intent.getStringExtra(FOLDER_UID) ?: ""
+                /**
+                 * You can update the IpsCustomization with a DayNightTheme to make update the colors of the sdk.
+                 * You will have more information about the DayNightTheme in the Developers Guide.
+                 */
+                val ipsCustomization = IpsCustomization()
+                Idcheckio.startIps(this, folderUid, this, ipsCustomization)
             }
-            idcheckioView.startOnline(onlineContext)
-        } else {
-            idcheckioView.start()
+            isOnline -> {
+                val idcheckioView = pushIdcheckioView(intent.getStringExtra("PARAMS")!!)
+                val onlineContext = intent.getStringExtra("ONLINE")?.let {
+                    OnlineContext.createFrom(it)
+                }
+                idcheckioView.startOnline(onlineContext)
+            }
+            else -> {
+                val idcheckioView = pushIdcheckioView(intent.getStringExtra("PARAMS")!!)
+                idcheckioView.start()
+            }
         }
+    }
+
+    /**
+     * Retrieve the params from the json.
+     * Create an [IdcheckioView], assign the parameters to the view
+     * And then push the view in the fragment manager.
+     * @param params a json string with all the sdk parameters
+     * @return the created [IdcheckioView]
+     */
+    private fun pushIdcheckioView(params: String) : IdcheckioView {
+        val idcheckioView = ParametersUtil.getIDCheckioViewFromCall(params)
+            .listener(this)
+            .build()
+        supportFragmentManager.beginTransaction().replace(R.id.idcheckio_container, idcheckioView).commit()
+        return idcheckioView
     }
 
     override fun onIdcheckioInteraction(interaction: IdcheckioInteraction, data: Any?) {
@@ -54,5 +82,14 @@ class IDCheckioActivity : FragmentActivity(), IdcheckioInteractionInterface {
             }
             else -> { Log.i("IDCheckioActivity", "Interaction not used : $interaction")}
         }
+    }
+
+    override fun onIpsSessionFailure(errorMsg: ErrorMsg) {
+        onIdcheckioInteraction(IdcheckioInteraction.ERROR, errorMsg)
+    }
+
+    override fun onIpsSessionSuccess() {
+        // Empty success (the sdk give no result on an ips session success)
+        onIdcheckioInteraction(IdcheckioInteraction.RESULT, IdcheckioResult())
     }
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,11 +20,15 @@ class _MyAppState extends State<MyApp> {
   bool _sdkActivated = false;
   IDCheckioResult? _captureResult;
   late ParamsListItem _selectedItem;
+  String _ipsFolderUid = "";
+  late Function() _ipsListener;
   late List<DropdownMenuItem<ParamsListItem>> _dropdownMenuItems;
+  TextEditingController ipsController = new TextEditingController();
   List<ParamsListItem> _dropdownItems = [
-    ParamsListItem("ID Offline", paramsID, false),
-    ParamsListItem("ID Online", paramsID, true),
+    ParamsListItem("ID Online", paramsIDOnline, true),
     ParamsListItem("Liveness Online", paramsLiveness, true),
+    ParamsListItem("Start Ips", null, true)..isIps = true,
+    ParamsListItem("ID Offline", paramsIDOffline, false),
     ParamsListItem("French health card Online", paramsFrenchHealthCard, true),
     ParamsListItem("Selfie Online", paramsSelfie, true),
     ParamsListItem("Address proof Online", paramsAddressProof, true),
@@ -33,12 +38,26 @@ class _MyAppState extends State<MyApp> {
     ParamsListItem("Attachment", paramsAttachment, true)
   ];
 
+  void listener() {
+    setState(() {
+      _ipsFolderUid = ipsController.text;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _dropdownMenuItems = buildDropDownMenuItems(_dropdownItems);
     _selectedItem = _dropdownMenuItems[0].value!;
+    _ipsListener = listener;
+    ipsController.addListener(_ipsListener);
   }
+
+  void dispose() {
+    ipsController.removeListener(_ipsListener);
+    super.dispose();
+  }
+
 
   Future<void> activateSDK() async {
     bool activationStatus = false;
@@ -68,7 +87,7 @@ class _MyAppState extends State<MyApp> {
         final pickedFile = await (imagePicker.getImage(source: ImageSource.gallery));
         if (pickedFile != null) {
           result = await IDCheckio.analyze(
-              params: _selectedItem.params,
+              params: _selectedItem.params!,
               side1Uri: pickedFile.path,
               side2uri: null,
               isOnline: _selectedItem.isOnline,
@@ -77,14 +96,29 @@ class _MyAppState extends State<MyApp> {
       } else {
         // Capture mode
         if (_selectedItem.isOnline) {
-          result = await IDCheckio.startOnline(_selectedItem.params, _captureResult?.onlineContext);
+          result = await IDCheckio.startOnline(_selectedItem.params!, _captureResult?.onlineContext);
         } else {
-          result = await IDCheckio.start(_selectedItem.params);
+          result = await IDCheckio.start(_selectedItem.params!);
         }
       }
       debugPrint('ID Capture Successful : ${result!.toJson()}', wrapWidth: 500);
     } on PlatformException catch (e) {
-      debugPrint("An error happened during the capture : ${e.code} - ${e.message}");
+      ErrorMsg errorMsg = ErrorMsg.fromJson(jsonDecode(e.message!));
+      debugPrint("An error happened during the capture : ${errorMsg.cause} - ${errorMsg.message} - ${errorMsg.subCause}");
+    }
+    if (!mounted) return;
+    setState(() {
+      _captureResult = result;
+    });
+  }
+
+  Future<void> startIps() async {
+    IDCheckioResult? result;
+    try {
+      result = await IDCheckio.startIps(ipsController.text);
+    } on PlatformException catch (e) {
+      ErrorMsg errorMsg = ErrorMsg.fromJson(jsonDecode(e.message!));
+      debugPrint("An error happened during the ips session : ${errorMsg.cause} - ${errorMsg.message} - ${errorMsg.subCause}");
     }
     if (!mounted) return;
     setState(() {
@@ -116,7 +150,11 @@ class _MyAppState extends State<MyApp> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_sdkActivated ? "SDK activated! 🎉" : "SDK not activated", style: TextStyle(fontSize: 24.0)),
+              Text(
+                  getTitle(),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 24.0)
+              ),
               SizedBox(height: 60),
               DropdownButton(
                 items: _dropdownMenuItems,
@@ -132,18 +170,17 @@ class _MyAppState extends State<MyApp> {
                 child: new Text(_sdkActivated ? "SDK already activated" : "Activate SDK"),
                 onPressed: _sdkActivated ? null : activateSDK,
               ),
-              ElevatedButton(
-                child: new Text(_sdkActivated ? "Capture Document" : "SDK not activated"),
-                onPressed: _sdkActivated ? capture : null,
+              Column(
+                children: buildChildren(),
               ),
               SizedBox(height: 40),
               Text(
                   _captureResult != null
                       ? _captureResult!.document != null && _captureResult!.document is IdentityDocument
-                          ? "Howdy ${(_captureResult!.document as IdentityDocument).fields[IdentityDocumentField.firstNames]!.value!.split(" ").first}"
-                                  " "
-                                  "${(_captureResult!.document as IdentityDocument).fields[IdentityDocumentField.lastNames]!.value}! 🤓"
-                          : "Capture OK 👍"
+                      ? "Howdy ${(_captureResult!.document as IdentityDocument).fields[IdentityDocumentField.firstNames]!.value!.split(" ").first}"
+                      " "
+                      "${(_captureResult!.document as IdentityDocument).fields[IdentityDocumentField.lastNames]!.value}! 🤓"
+                      : "Capture OK 👍"
                       : "Please first scan an ID",
                   style: TextStyle(fontSize: 20.0)),
             ],
@@ -152,4 +189,54 @@ class _MyAppState extends State<MyApp> {
       ),
     );
   }
+
+  String getTitle() {
+    String title;
+    if(_sdkActivated && _selectedItem.isIps && _ipsFolderUid.isEmpty) {
+      title = "You need to provide a folder uid to start an ips session.";
+    } else if(_sdkActivated ) {
+      title = "SDK activated! 🎉";
+    } else {
+      title = "SDK not activated";
+    }
+    return title;
+  }
+
+  List<Widget> buildChildren() {
+    List<Widget> builder = [];
+    if(_selectedItem.isIps){
+      builder.add(
+        Padding(
+          child: TextField(
+            controller: ipsController,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: 'Enter your ips folder uid.',
+            ),
+          ),
+          padding: EdgeInsets.only(left: 32.0, right: 32.0),
+        )
+      );
+    }
+    String buttonText;
+    Function()? onClick;
+    if(_sdkActivated && _selectedItem.isIps) {
+      buttonText = "Start ips session";
+      onClick = _ipsFolderUid.isEmpty ? null : startIps;
+    } else if(_sdkActivated) {
+      buttonText = "Capture Document";
+      onClick = capture;
+    } else {
+      buttonText = "SDK not activated";
+      onClick = null;
+    }
+    builder.add(
+        ElevatedButton(
+          child: new Text(buttonText),
+          onPressed: onClick,
+        )
+    );
+    return builder;
+  }
+
 }

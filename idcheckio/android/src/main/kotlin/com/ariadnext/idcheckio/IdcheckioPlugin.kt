@@ -11,10 +11,12 @@ import com.ariadnext.idcheckio.sdk.bean.SdkEnvironment
 import com.ariadnext.idcheckio.sdk.component.Idcheckio
 import com.ariadnext.idcheckio.sdk.interfaces.ErrorMsg
 import com.ariadnext.idcheckio.sdk.interfaces.IdcheckioCallback
+import com.ariadnext.idcheckio.sdk.interfaces.IdcheckioErrorCause
 import com.ariadnext.idcheckio.sdk.interfaces.IdcheckioInteraction
 import com.ariadnext.idcheckio.sdk.interfaces.IdcheckioInteractionInterface
 import com.ariadnext.idcheckio.sdk.interfaces.result.IdcheckioResult
-import com.ariadnext.idcheckio.sdk.utils.toJson
+import com.ariadnext.idcheckio.sdk.interfaces.result.ips.IpsResultCallback
+import com.ariadnext.idcheckio.sdk.utils.extension.toJson
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -59,7 +61,18 @@ class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRe
                 intent.putExtra("PARAMS", call.argument<String?>(PARAMS).toString())
                 call.argument<String?>(ONLINE_CONTEXT)?.let { intent.putExtra("ONLINE", it) }
                 intent.putExtra("isOnline", true)
-                activity.startActivityForResult(intent, START_ONLINE_REQUEST)
+                activity.startActivityForResult(intent, START_REQUEST)
+            }
+            START_IPS -> {
+                val folderUid = call.argument<String?>(FOLDER_UID)
+                if(folderUid == null) {
+                    result.error("CUSTOMER_ERROR", ErrorMsg(cause = IdcheckioErrorCause.CUSTOMER_ERROR, details = "MISSING_FOLDER_UID", message = "The ips folderUid is mandatory to start an ips session.").toJson(), null)
+                } else {
+                    val intent = Intent(activity, IDCheckioActivity::class.java)
+                    intent.putExtra(FOLDER_UID, folderUid)
+                    intent.putExtra("isIps", true)
+                    activity.startActivityForResult(intent, START_REQUEST)
+                }
             }
             ANALYZE -> {
                 val params = ParametersUtil.getIDCheckioViewFromCall(call.argument<String?>(PARAMS).toString()).captureParams()
@@ -93,7 +106,7 @@ class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRe
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
-        if(requestCode == START_REQUEST || requestCode == START_ONLINE_REQUEST){
+        if(requestCode == START_REQUEST){
             if(resultCode == Activity.RESULT_OK){
                 result?.success(data?.extras?.getString("IDCHECKIO_RESULT", "{}") ?: "{}")
             } else if (resultCode == Activity.RESULT_CANCELED) {
@@ -132,7 +145,7 @@ class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRe
                 result?.success(null)
             } else {
                 /* Activation is KO */
-                result?.error(error?.type?.name, error?.message, null)
+                result?.error(error?.cause?.name, error?.toJson() ?: "{}", null)
             }
         }
     }
@@ -166,7 +179,6 @@ class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRe
         }
 
         const val START_REQUEST = 5
-        const val START_ONLINE_REQUEST = 6
     }
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {

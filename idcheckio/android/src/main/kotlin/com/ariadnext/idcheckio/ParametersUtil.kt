@@ -1,6 +1,5 @@
 package com.ariadnext.idcheckio
 
-import com.ariadnext.idcheckio.sdk.bean.CheckType
 import com.ariadnext.idcheckio.sdk.bean.ConfirmationType
 import com.ariadnext.idcheckio.sdk.bean.DataRequirement
 import com.ariadnext.idcheckio.sdk.bean.DocumentType
@@ -26,7 +25,7 @@ object ParametersUtil {
                 .orientation(Orientation.valueOf(json.optString(ORIENTATION, Orientation.LANDSCAPE.name)))
                 .confirmType(ConfirmationType.valueOf(json.optString(CONFIRM_TYPE, ConfirmationType.NONE.name)))
                 .integrityCheck(json.optJSONObject(INTEGRITY_CHECK) ?.let {
-                    IntegrityCheck(readEmrtd = it.optBoolean(READ_EMRTD))
+                    IntegrityCheck(readEmrtd = it.optBoolean(READ_EMRTD), docLiveness = it.optBoolean(DOC_LIVENESS))
                 } ?: IntegrityCheck.none())
                 .useHd(json.optBoolean(USE_HD, false))
                 .scanBothSides(Forceable.valueOf(json.optString(SCAN_BOTH_SIDES, Forceable.DISABLED.name)))
@@ -40,7 +39,6 @@ object ParametersUtil {
                 } ?: Extraction(DataRequirement.DISABLED, FaceDetection.DISABLED))
                 .onlineConfig(json.optJSONObject(ONLINE_CONFIG)?.let {
                     OnlineConfig(isReferenceDocument = it.optBoolean(IS_REFERENCE_DOC),
-                            checkType = CheckType.valueOf(it.optString(CHECK_TYPE, CheckType.CHECK_FULL.name)),
                             cisType = it.optString(CIS_TYPE).takeIf { type -> type.isNotEmpty() }?.let { type -> CISType.valueOf(type) },
                             folderUid = it.optString(FOLDER_UID).takeIf { folder -> folder.isNotEmpty() },
                             biometricConsent = it.opt(BIOMETRIC_CONSENT)?.takeIf { consent -> consent.toString() != "null" }?.let { consent -> consent as Boolean },

@@ -2,14 +2,15 @@ import 'package:idcheckio/idcheckio.dart';
 
 class ParamsListItem {
   String name;
-  IDCheckioParams params;
+  IDCheckioParams? params;
   bool isOnline;
+  bool isIps = false;
   bool upload = false;
 
   ParamsListItem(this.name, this.params, this.isOnline);
 }
 
-final IDCheckioParams paramsID = IDCheckioParams(IDCheckioParamsBuilder()
+final IDCheckioParams paramsIDOffline = IDCheckioParams(IDCheckioParamsBuilder()
   ..docType = DocumentType.ID
   ..orientation = IDCheckioOrientation.PORTRAIT
   ..integrityCheck = IntegrityCheck(readEmrtd: true)
@@ -24,7 +25,13 @@ final IDCheckioParams paramsID = IDCheckioParams(IDCheckioParamsBuilder()
   ..feedbackLevel = FeedbackLevel.ALL
   ..adjustCrop = false
   ..confirmAbort = false
-  ..onlineConfig = OnlineConfig(checkType: CheckType.CHECK_FAST, isReferenceDocument: true));
+  ..onlineConfig = OnlineConfig(isReferenceDocument: true));
+
+final IDCheckioParams paramsIDOnline = IDCheckioParams(IDCheckioParamsBuilder()
+  ..docType = DocumentType.ID
+  ..orientation = IDCheckioOrientation.PORTRAIT
+  ..integrityCheck = IntegrityCheck(readEmrtd: true, docLiveness: false)
+  ..onlineConfig = OnlineConfig(isReferenceDocument: true));
 
 final IDCheckioParams paramsIDAnalyze = IDCheckioParams(IDCheckioParamsBuilder()
   ..docType = DocumentType.ID

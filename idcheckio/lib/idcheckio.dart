@@ -30,6 +30,18 @@ class IDCheckio {
     }
   }
 
+  static Future<IDCheckioResult> startIps(String folderUid) async {
+    try {
+      String json = await (_channel.invokeMethod('startIps', <String, dynamic>{
+        'folderUid': folderUid
+      }));
+      IDCheckioResult result = IDCheckioResult.fromJson(jsonDecode(json));
+      return result;
+    } on PlatformException catch (e) {
+      throw PlatformException(code: "CAPTURE_FAILED", message: e.message);
+    }
+  }
+
   static Future<IDCheckioResult> startOnline(IDCheckioParams params, OnlineContext? onlineContext) async {
     try {
       String json = await (_channel.invokeMethod('startOnline', <String, dynamic>{
@@ -78,7 +90,6 @@ class IDCheckioParams {
   final FeedbackLevel? feedbackLevel;
   final bool? adjustCrop;
   final FileSize? maxPictureFilesize;
-  final String? token;
   final bool? confirmAbort;
   final OnlineConfig? onlineConfig;
 
@@ -96,7 +107,6 @@ class IDCheckioParams {
         feedbackLevel = builder.feedbackLevel,
         adjustCrop = builder.adjustCrop,
         maxPictureFilesize = builder.maxPictureFilesize,
-        token = builder.token,
         confirmAbort = builder.confirmAbort,
         onlineConfig = builder.onlineConfig;
 
@@ -131,7 +141,6 @@ class IDCheckioParams {
     'FeedbackLevel': feedbackLevel?.name(),
     'AdjustCrop': adjustCrop,
     'MaxPictureFilesize': maxPictureFilesize?.name(),
-    'Token': token,
     'ConfirmAbort': confirmAbort,
     if (onlineConfig != null)
       'OnlineConfig': onlineConfig!.toJson()
@@ -202,27 +211,28 @@ class Extraction {
 
 class IntegrityCheck {
   bool? readEmrtd = false;
+  bool? docLiveness = false;
 
-  IntegrityCheck({this.readEmrtd = false});
+
+  IntegrityCheck({this.readEmrtd = false, this.docLiveness});
 
   Map<String, dynamic> toJson() => {
-    'ReadEmrtd': readEmrtd
+    'ReadEmrtd': readEmrtd,
+    'DocLiveness': docLiveness
   };
 }
 
 class OnlineConfig {
-  CheckType? checkType;
   CISType? cisType;
   bool? isReferenceDocument;
   String? folderUid;
   bool? biometricConsent;
   bool? enableManualAnalysis;
 
-  OnlineConfig({this.cisType, this.checkType, this.isReferenceDocument, this.folderUid, this.biometricConsent, this.enableManualAnalysis});
+  OnlineConfig({this.cisType, this.isReferenceDocument, this.folderUid, this.biometricConsent, this.enableManualAnalysis});
 
   Map<String, dynamic> toJson() {
     Map<String, dynamic> result = Map<String, dynamic>();
-    if (checkType != null) result.putIfAbsent('checkType', () => checkType!.name());
     if (cisType != null) result.putIfAbsent('cisType', () => cisType!.name());
     if (isReferenceDocument != null) result.putIfAbsent('isReferenceDocument', () => isReferenceDocument);
     if (folderUid != null) result.putIfAbsent('folderUid', () => folderUid);
@@ -231,8 +241,6 @@ class OnlineConfig {
     return result;
   }
 }
-
-enum CheckType { CHECK_FULL, CHECK_FAST }
 
 enum Language { fr, en, pl, es, ro, cs, pt }
 
@@ -243,12 +251,6 @@ enum FileSize { ONE_MEGA_BYTE, TWO_MEGA_BYTES, THREE_MEGA_BYTES, FOUR_MEGA_BYTES
 enum CISType { ID, IBAN, CHEQUE, TAX_SHEET, PAY_SLIP, ADDRESS_PROOF, CREDIT_CARD, PORTRAIT, LEGAL_ENTITY, CAR_REGISTRATION, LIVENESS, OTHER }
 
 extension CISTypeName on CISType {
-  String name() {
-    return toString().split(".").last;
-  }
-}
-
-extension CheckTypeName on CheckType {
   String name() {
     return toString().split(".").last;
   }
@@ -470,16 +472,59 @@ class ImageResult {
 }
 
 class ErrorMsg {
-  String? type;
-  int? code;
+  IdcheckioErrorCause cause;
+  String details;
   String? message;
+  IdcheckioSubCause? subCause;
+
 
   ErrorMsg.fromJson(Map<String, dynamic> json)
-      : type = json['type'],
-        code = json['code'],
-        message = json['message'];
+      : cause = enumFromString(IdcheckioErrorCause.values, json['cause']) ?? IdcheckioErrorCause.INTERNAL_ERROR,
+        details = json['details'],
+        message = json['message'],
+        subCause = enumFromString(IdcheckioSubCause.values, json['subCause']);
 
-  String toJson() => "{\"type\":\"$type\",\"code\":\"$code\",\"message\":\"$message\"}";
+  String toJson() => "{\"cause\":\"$cause\",\"details\":\"$details\",\"message\":\"$message\",\"subCause\":\"$subCause\"}";
+}
+
+enum IdcheckioErrorCause {
+  /// Regroup all the integration errors. If you need to understand what you are doing wrong, please contact the CSM team with the details.
+  CUSTOMER_ERROR,
+  /// Regroup all the network errors that happens when the SDK fails to reach our server.
+  NETWORK_ERROR,
+  /// The user has done something wrong during the capture.
+  USER_ERROR,
+  /// Internal server error from our side.
+  INTERNAL_ERROR,
+  /// Regroup all the hardware/software problems that could happen during the session.
+  DEVICE_ERROR,
+  /// The document shown by the user is not acceptable. (Expired, rejected, ...)
+  DOCUMENT_ERROR
+}
+
+extension IdcheckioErrorCauseName on IdcheckioErrorCause {
+  String name() {
+    return toString().split(".").last;
+  }
+}
+
+enum IdcheckioSubCause {
+  /// Missing permissions, permissions have been refused by user
+  MISSING_PERMISSIONS,
+  /// IPS session haven been cancelled by user
+  CANCELLED_BY_USER,
+  /// This model of document cannot be used.
+  MODEL_REJECTED,
+  /// The document is expired
+  ANALYSIS_EXPIRED_DOC,
+  /// The document is not eligible for a PVID session.
+  PVID_NOT_ELIGIBLE
+}
+
+extension IdcheckioSubCauseName on IdcheckioSubCause {
+  String name() {
+    return toString().split(".").last;
+  }
 }
 
 abstract class Document {

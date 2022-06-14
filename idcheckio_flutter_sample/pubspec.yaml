@@ -30,7 +30,7 @@ dependencies:
   cupertino_icons: ^1.0.3
   idcheckio:
     path: ../idcheckio
-  image_picker: ^0.8.0+3
+  image_picker: ^0.8.5+3
 
 dev_dependencies:
   flutter_test:

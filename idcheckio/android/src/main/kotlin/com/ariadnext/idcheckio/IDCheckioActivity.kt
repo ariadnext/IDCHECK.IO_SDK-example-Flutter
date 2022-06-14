@@ -10,10 +10,14 @@ import com.ariadnext.idcheckio.sdk.bean.OnlineContext
 import com.ariadnext.idcheckio.sdk.component.Idcheckio
 import com.ariadnext.idcheckio.sdk.component.IdcheckioView
 import com.ariadnext.idcheckio.sdk.interfaces.ErrorMsg
+import com.ariadnext.idcheckio.sdk.interfaces.IdcheckioError
+import com.ariadnext.idcheckio.sdk.interfaces.IdcheckioErrorCause
 import com.ariadnext.idcheckio.sdk.interfaces.IdcheckioInteraction
 import com.ariadnext.idcheckio.sdk.interfaces.IdcheckioInteractionInterface
+import com.ariadnext.idcheckio.sdk.interfaces.IdcheckioSubCause
 import com.ariadnext.idcheckio.sdk.interfaces.result.IdcheckioResult
 import com.ariadnext.idcheckio.sdk.interfaces.result.ips.IpsResultCallback
+import com.ariadnext.idcheckio.sdk.interfaces.toErrorMsg
 import com.ariadnext.idcheckio.sdk.utils.extension.toJson
 
 class IDCheckioActivity : FragmentActivity(), IdcheckioInteractionInterface, IpsResultCallback {
@@ -62,6 +66,10 @@ class IDCheckioActivity : FragmentActivity(), IdcheckioInteractionInterface, Ips
             .build()
         supportFragmentManager.beginTransaction().replace(R.id.idcheckio_container, idcheckioView).commit()
         return idcheckioView
+    }
+
+    override fun onBackPressed(){
+        onIdcheckioInteraction(IdcheckioInteraction.ERROR, IdcheckioError.CANCELLED_BY_USER.toErrorMsg("Session cancelled by user."))
     }
 
     override fun onIdcheckioInteraction(interaction: IdcheckioInteraction, data: Any?) {

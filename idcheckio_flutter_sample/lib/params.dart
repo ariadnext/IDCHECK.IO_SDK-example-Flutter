@@ -13,7 +13,6 @@ class ParamsListItem {
 final IDCheckioParams paramsIDOffline = IDCheckioParams(IDCheckioParamsBuilder()
   ..docType = DocumentType.ID
   ..orientation = IDCheckioOrientation.PORTRAIT
-  ..integrityCheck = IntegrityCheck(readEmrtd: true)
   ..useHd = false
   ..confirmationType = ConfirmationType.DATA_OR_PICTURE
   ..scanBothSides = ScanBothSides.ENABLED
@@ -24,13 +23,12 @@ final IDCheckioParams paramsIDOffline = IDCheckioParams(IDCheckioParamsBuilder()
   ..maxPictureFilesize = FileSize.TWO_MEGA_BYTES
   ..feedbackLevel = FeedbackLevel.ALL
   ..adjustCrop = false
-  ..confirmAbort = false
-  ..onlineConfig = OnlineConfig(isReferenceDocument: true));
+  ..confirmAbort = false);
 
 final IDCheckioParams paramsIDOnline = IDCheckioParams(IDCheckioParamsBuilder()
   ..docType = DocumentType.ID
   ..orientation = IDCheckioOrientation.PORTRAIT
-  ..integrityCheck = IntegrityCheck(readEmrtd: true, docLiveness: false)
+  ..integrityCheck = IntegrityCheck(readEmrtd: true, docLiveness: true)
   ..onlineConfig = OnlineConfig(isReferenceDocument: true));
 
 final IDCheckioParams paramsIDAnalyze = IDCheckioParams(IDCheckioParamsBuilder()

@@ -86,23 +86,11 @@ Future<void> activate() async {
 
 3. To start the capture of a document, you have to call the `start()` method with an `IdcheckioParams` object. You will receive the result in an `IdcheckioResult` object.
 ```java
-  final IDCheckioParams paramsID = IDCheckioParams(
-    IDCheckioParamsBuilder()
-      ..docType = DocumentType.ID
-      ..orientation = IDCheckioOrientation.PORTRAIT
-      ..integrityCheck = IntegrityCheck(readEmrtd: true)
-      ..useHd = false
-      ..confirmationType = ConfirmationType.DATA_OR_PICTURE
-      ..scanBothSides = ScanBothSides.ENABLED
-      ..sideOneExtraction = Extraction(Codeline.VALID, FaceDetection.ENABLED)
-      ..sideTwoExtraction = Extraction(Codeline.REJECT, FaceDetection.DISABLED)
-      ..language = Language.fr
-      ..manualButtonTimer = 10
-      ..maxPictureFilesize = FileSize.TWO_MEGA_BYTES
-      ..feedbackLevel = FeedbackLevel.ALL
-      ..adjustCrop = false
-      ..confirmAbort = false
-      ..onlineConfig = OnlineConfig(checkType: CheckType.CHECK_FAST, isReferenceDocument: true));
+final IDCheckioParams paramsIDOnline = IDCheckioParams(IDCheckioParamsBuilder()
+  ..docType = DocumentType.ID
+  ..orientation = IDCheckioOrientation.PORTRAIT
+  ..integrityCheck = IntegrityCheck(readEmrtd: true, docLiveness: false)
+  ..onlineConfig = OnlineConfig(isReferenceDocument: true));
 
   Future<void> capture(IDCheckioParams params) async{
     String capture;
@@ -165,6 +153,24 @@ Future<void> analyze(IDCheckioParams params, IDCheckioResult? result) async{
     if (!mounted) return;
     setState(() {
       _capture = capture;
+    });
+  }
+```
+
+6. If you want to start an ips session, you first need to create a new ips session by following the IPS documentation and then call the startIps method with the retrieved token. The result is empty when the capture is succesful and an error is send otherwise. If you want to retrieve your data you need to check on ips the result of the capture.
+If you want the customize the colors of the ips session, you can update the IpsCustomization() object inside if the IdcheckioPlugin with your colors (For Android take a look at IDCheckioActivity).
+```java  
+  Future<void> startIps() async {
+    IDCheckioResult? result;
+    try {
+      result = await IDCheckio.startIps(ipsController.text);
+    } on PlatformException catch (e) {
+      ErrorMsg errorMsg = ErrorMsg.fromJson(jsonDecode(e.message!));
+      debugPrint("An error happened during the ips session : ${errorMsg.cause} - ${errorMsg.message} - ${errorMsg.subCause}");
+    }
+    if (!mounted) return;
+    setState(() {
+      _captureResult = result;
     });
   }
 ```

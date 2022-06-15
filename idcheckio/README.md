@@ -158,7 +158,7 @@ Future<void> analyze(IDCheckioParams params, IDCheckioResult? result) async{
 ```
 
 6. If you want to start an ips session, you first need to create a new ips session by following the IPS documentation and then call the startIps method with the retrieved token. The result is empty when the capture is succesful and an error is send otherwise. If you want to retrieve your data you need to check on ips the result of the capture.
-If you want the customize the colors of the ips session, you can update the IpsCustomization() object inside if the IdcheckioPlugin with your colors (For Android take a look at IDCheckioActivity).
+If you want the customize the colors of the ips session, you can update the IpsCustomization() object for Android or ipsTheme for iOS inside the IdcheckioPlugin with your colors (For Android take a look at IDCheckioActivity).
 ```java  
   Future<void> startIps() async {
     IDCheckioResult? result;

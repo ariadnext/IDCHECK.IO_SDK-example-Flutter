@@ -11,6 +11,7 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
         case start
         case startOnline
         case analyze
+        case startIps
     }
     
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -43,16 +44,24 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
                 }
             }
         case .start:
-            let params: SDKParams = parseParameters(params: args)
-            try? Idcheckio.shared.setParams(params)
+            let params = parseParameters(params: args)
+            try? Idcheckio.shared.setParams(params.0)
+            try? Idcheckio.shared.setExtraParams(params.1)
             launchSession(online: false)
         case .startOnline:
-            let params: SDKParams = parseParameters(params: args["params"] as? [String : Any])
-            try? Idcheckio.shared.setParams(params)
+            let params = parseParameters(params: args["params"] as? [String : Any])
+            if params.0.scanBothSides == .disabled {
+                params.0.scanBothSides = nil
+            }
+            try? Idcheckio.shared.setParams(params.0)
+            try? Idcheckio.shared.setExtraParams(params.1)
             launchSession(online: true, onlineContext: OnlineContext.from(json: args["onlineContext"] as? String ?? ""))
+        case .startIps:
+            launchIpsSession(folderUID: args["folderUid"] as? String ?? "")
         case .analyze:
-            let params: SDKParams = parseParameters(params: args["params"] as? [String : Any])
-            try? Idcheckio.shared.setParams(params)
+            let params = parseParameters(params: args["params"] as? [String : Any])
+            try? Idcheckio.shared.setParams(params.0)
+            try? Idcheckio.shared.setExtraParams(params.1)
             Idcheckio.shared.delegate = idcheckioDelegate
             idcheckioDelegate.flutterResult = flutterResult
             let onlineContext = OnlineContext.from(json: args["onlineContext"] as? String ?? "")
@@ -71,16 +80,17 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
         }
     }
     
-    func parseParameters(params : [String: Any?]?) -> SDKParams{
+    func parseParameters(params : [String: Any?]?) -> (SDKParams, SDKExtraParams) {
         let sdkParams = SDKParams()
+        let extraParameters = SDKExtraParams()
         guard let params = params else {
-            return sdkParams
+            return (sdkParams, extraParameters)
         }
         sdkParams.documentType = DocumentType(rawValue: (params["DocumentType"] as! String)) ?? .disabled
         sdkParams.confirmType = ConfirmationType(rawValue: (params["ConfirmType"] as! String)) ?? .none
-        let integrityCheck = IntegrityCheck()
-        integrityCheck.readEmrtd = params["ReadEmrtd"] as? Bool ?? false
-        sdkParams.integrityCheck = integrityCheck
+        let integrityCheck = params["IntegrityCheck"] as! [String: Any]
+        sdkParams.integrityCheck.readEmrtd = integrityCheck["ReadEmrtd"] as? Bool ?? false
+        sdkParams.integrityCheck.docLiveness = integrityCheck["DocLiveness"] as? Bool ?? false
         sdkParams.useHD = params["UseHd"] as? Bool ?? false
         sdkParams.scanBothSides = ScanBothSides(rawValue: (params["ScanBothSides"] as! String)) ?? .disabled
         let side1 : [String: Any] = params["Side1Extraction"] as! [String: Any]
@@ -93,20 +103,20 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
         extractionSide2.codeline = Extraction.DataRequirement(rawValue: (side2["DataRequirement"] as! String)) ?? .disabled
         extractionSide2.face = Extraction.FaceDetection(rawValue: (side2["FaceDetection"] as! String)) ?? .disabled
         sdkParams.side2Extraction = extractionSide2
-        Idcheckio.shared.extraParameters.language = Language(rawValue: params["Language"] as? String ?? "")
-        Idcheckio.shared.extraParameters.feedbackLevel = FeedbackLevel(rawValue: params["FeedbackLevel"] as? String ?? "") ?? .all
-        Idcheckio.shared.extraParameters.maxPictureFilesize = FileSize(rawValue: params["MaxPictureFilesize"] as? String ?? "")
-        Idcheckio.shared.extraParameters.adjustCrop = params["AdjustCrop"] as? Bool ?? false
-        Idcheckio.shared.extraParameters.confirmAbort = params["ConfirmAbort"] as? Bool ?? false
+        extraParameters.language = Language(rawValue: params["Language"] as? String ?? "")
+        extraParameters.feedbackLevel = FeedbackLevel(rawValue: params["FeedbackLevel"] as? String ?? "") ?? .all
+        extraParameters.maxPictureFilesize = FileSize(rawValue: params["MaxPictureFilesize"] as? String ?? "")
+        extraParameters.token = params["Token"] as? String
+        extraParameters.adjustCrop = params["AdjustCrop"] as? Bool ?? false
+        extraParameters.confirmAbort = params["ConfirmAbort"] as? Bool ?? false
         let onlineConfigParams = params["OnlineConfig"] as! [String: Any?]
         let onlineConfig = sdkParams.onlineConfig
         onlineConfig.isReferenceDocument = (onlineConfigParams["isReferenceDocument"] as? Bool) ?? false
-        onlineConfig.checkType = CheckType(rawValue: onlineConfigParams["checkType"] as?  String ?? "") ?? .checkFull
         onlineConfig.cisType = CISDocumentType(rawValue: onlineConfigParams["cisType"] as? String ?? "") ?? nil
         onlineConfig.folderUid = (onlineConfigParams["folderUid"] as? String) ?? nil
         onlineConfig.biometricConsent = (onlineConfigParams["biometricConsent"] as? Bool) ?? nil
         onlineConfig.enableManualAnalysis = (onlineConfigParams["enableManualAnalysis"] as? Bool) ?? false
-        return sdkParams
+        return (sdkParams, extraParameters)
     }
 
     func startCompletion(error: Error?) {
@@ -141,9 +151,29 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
             let idcheckkioViewController = IdcheckioViewController()
             idcheckkioViewController.onlineContext = onlineContext
             idcheckkioViewController.isOnlineSession = online
-            idcheckkioViewController.startCompletion = self.startCompletion(error:)
             idcheckkioViewController.resultCompletion = self.resultCompletion(result:)
             rootViewController?.present(idcheckkioViewController, animated: true, completion: nil)
+        }
+    }
+    
+    func launchIpsSession(folderUID: String) {
+        guard let rootViewController = UIApplication.shared.windows.first?.rootViewController else { return }
+        /**
+         * You can update the IpsTheme with a  Theme to make update the colors of the sdk.
+         * You will have more information about the Theme in the Developers Guide.
+         */
+        let ipsTheme = IpsTheme(theme: Theme(), orientation: .portrait)
+        DispatchQueue.main.async { [folderUID, ipsTheme] in
+            Idcheckio.startIps(with: folderUID, from: rootViewController, ipsTheme: ipsTheme) { result in
+                switch result {
+                case .success:
+                    self.flutterResult?(nil)
+                case .failure(let error):
+                    if let error = error as? IdcheckioError {
+                        self.flutterResult?(FlutterError(code: "CAPTURE_FAILED", message: error.toJson(), details: nil))
+                    }
+                }
+            }
         }
     }
 
@@ -162,9 +192,6 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
                 }
             }
             flutterResult!(jsonResult)
-        }
-        func idcheckioDidSendEvent(interaction: IdcheckioInteraction, msg: IdcheckioMsg?) {
-            //Nothing to do...jsonResult    String
         }
     }
 }
@@ -190,18 +217,8 @@ extension IdcheckioResult {
 
 extension IdcheckioError {
     func toJson() -> String {
-        var type = ""
-        print(self, terminator:"", to: &type)
-        type = type.snakeCased().uppercased()
-        return String(format: "%@%@%@%@%@%@%@", "{\"type\":\"", type, "\",\"code\":", getCode() ?? "null", ", \"message\":\"", localizedDescription, "\"}")
-    }
-    
-    func getCode() -> Int? {
-        switch self {
-        case .internalError(let code):
-            return code
-        default:
-            return nil
-        }
+        let jsonEncoder = JSONEncoder()
+        let jsonData = try? jsonEncoder.encode(self)
+        return String(data: jsonData ?? Data(), encoding: String.Encoding.utf8) ?? "{}"
     }
 }

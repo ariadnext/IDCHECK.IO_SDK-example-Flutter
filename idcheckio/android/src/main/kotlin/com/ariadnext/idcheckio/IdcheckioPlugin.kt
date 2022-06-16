@@ -145,7 +145,7 @@ class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRe
                 result?.success(null)
             } else {
                 /* Activation is KO */
-                result?.error(error?.cause?.name, error?.toJson() ?: "{}", null)
+                result?.error("INIT_FAILED", error?.toJson() ?: "{}", null)
             }
         }
     }

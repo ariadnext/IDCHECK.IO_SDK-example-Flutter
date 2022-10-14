@@ -5,6 +5,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:id="@+id/idcheckio_container"
-    tools:context="com.ariadnext.idcheckio.IDCheckioActivity">
+    tools:context="com.example.idcheckio.IdcheckioActivity">
 
 </androidx.fragment.app.FragmentContainerView>

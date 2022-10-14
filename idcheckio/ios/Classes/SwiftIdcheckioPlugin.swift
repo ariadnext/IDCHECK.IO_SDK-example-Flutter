@@ -29,16 +29,11 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
         }
         switch method {
         case .activate:
-            let licenceFilename : String = args["license"] as? String ?? ""
-            let disableAudioForLiveness : Bool = args["disableAudioForLiveness"] as? Bool ?? true
-            let environment : SDKEnvironment = SDKEnvironment.init(rawValue: (args["environment"] as? String ?? "PROD").lowercased()) ?? .prod
+            let idToken : String = args["idToken"] as? String ?? ""
             let extractData : Bool = args["extractData"] as? Bool ?? true
-            Idcheckio.shared.activate(withLicenseFilename: licenceFilename, extractData: extractData, disableAudioForLiveness: disableAudioForLiveness, sdkEnvironment: environment) { (error: IdcheckioError?) in
+            Idcheckio.shared.activate(withToken: idToken, extractData: extractData) { (error: IdcheckioError?) in
                 if let error = error {
-                    var errorName = ""
-                    print(error, terminator:"", to: &errorName)
-                    errorName = errorName.snakeCased().uppercased()
-                    result(FlutterError(code: errorName, message: "Error on initialization :\(error.localizedDescription)", details: nil))
+                    result(FlutterError(code: "INIT_FAILED", message: error.toJson(), details: nil))
                 } else {
                     result(nil)
                 }
@@ -106,7 +101,6 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
         extraParameters.language = Language(rawValue: params["Language"] as? String ?? "")
         extraParameters.feedbackLevel = FeedbackLevel(rawValue: params["FeedbackLevel"] as? String ?? "") ?? .all
         extraParameters.maxPictureFilesize = FileSize(rawValue: params["MaxPictureFilesize"] as? String ?? "")
-        extraParameters.token = params["Token"] as? String
         extraParameters.adjustCrop = params["AdjustCrop"] as? Bool ?? false
         extraParameters.confirmAbort = params["ConfirmAbort"] as? Bool ?? false
         let onlineConfigParams = params["OnlineConfig"] as! [String: Any?]

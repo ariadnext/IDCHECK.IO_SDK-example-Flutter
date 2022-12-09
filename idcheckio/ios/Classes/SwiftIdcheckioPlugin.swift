@@ -28,11 +28,10 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
         }
         switch method {
         case .activate:
-            let licenceFilename : String = args["license"] as? String ?? ""
+            let idToken : String = args["idToken"] as? String ?? ""
             let disableAudioForLiveness : Bool = args["disableAudioForLiveness"] as? Bool ?? true
-            let environment : SDKEnvironment = SDKEnvironment.init(rawValue: (args["environment"] as? String ?? "PROD").lowercased()) ?? .prod
             let extractData : Bool = args["extractData"] as? Bool ?? true
-            Idcheckio.shared.activate(withLicenseFilename: licenceFilename, extractData: extractData, disableAudioForLiveness: disableAudioForLiveness, sdkEnvironment: environment) { (error: IdcheckioError?) in
+            Idcheckio.shared.activate(withToken: idToken, extractData: extractData, disableAudioForLiveness: disableAudioForLiveness) { (error: IdcheckioError?) in
                 if let error = error {
                     var errorName = ""
                     print(error, terminator:"", to: &errorName)
@@ -78,8 +77,9 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
         }
         sdkParams.documentType = DocumentType(rawValue: (params["DocumentType"] as! String)) ?? .disabled
         sdkParams.confirmType = ConfirmationType(rawValue: (params["ConfirmType"] as! String)) ?? .none
+        let integrityCheckParams = params["IntegrityCheck"] as! [String: Any?]
         let integrityCheck = IntegrityCheck()
-        integrityCheck.readEmrtd = params["ReadEmrtd"] as? Bool ?? false
+        integrityCheck.readEmrtd = integrityCheckParams["ReadEmrtd"] as? Bool ?? false
         sdkParams.integrityCheck = integrityCheck
         sdkParams.useHD = params["UseHd"] as? Bool ?? false
         sdkParams.scanBothSides = ScanBothSides(rawValue: (params["ScanBothSides"] as! String)) ?? .disabled

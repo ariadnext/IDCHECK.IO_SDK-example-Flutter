@@ -33,13 +33,22 @@ platform :ios, '10.0'
 source 'https://github.com/CocoaPods/Specs.git'
 source 'https://git-externe.rennes.ariadnext.com/idcheckio/axt-podspecs.git'
 ```
+ - Add a post_install script : 
+```
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
+    end
+  end
+end
+```
 
 2. Retrieve the sdk using `pod install --repo-update`
 - ⚠️⚠️  &nbsp; You will need to have a `.netrc` file on your `$HOME` folder setup with our credentials. Check the official documentation for more informations. &nbsp;⚠️⚠️
 
-3. Add the licence file to your iOS project.
-
-4. In your project, open the `*.plist` file and the following entry :
+3. In your project, open the `*.plist` file and the following entry :
 - "Privacy - Camera Usage Description" : "Camera is being used to scan documents"
 
 #### Android
@@ -57,22 +66,19 @@ packagingOptions {
 
 2. In order to access our external nexus for retrieving the latest version of the IDCheck.io SDK, you have to update the gradle file from the **plugin** project `PATH_TO_PLUGIN_FOLDER/android/build.gradle`, and replace `$YOUR_USERNAME` and `$YOUR_PASSWORD` with the credentials given by our support team.
 
-3. Put the licence file in  `android/app/src/main/assets/`
-- ⚠️  &nbsp; Don't forget to change your `signingConfig` with the certificate you give us to create the licence. &nbsp;⚠️
-
 ## Usage
 
 1. Import the following file :
-```
+```dart
 import 'package:idcheckio/idcheckio.dart';
 ```
 
 2. Before capturing any document, you need to activate the licence. To do so, you have to use the `activate()` method.
-```java  
+```dart
 Future<void> activate() async {
     String activationStatus;
     try {
-      await IDCheckio.activate(licenceFilename: "license", environment: Environment.DEMO, disableAudioForLiveness: true, extractData: true);
+      await IDCheckio.activate(idToken: _activationToken, disableAudioForLiveness: true, extractData: true);
       activationStatus = "The sdk is activated !";
     } on PlatformException catch (e){
       activationStatus = "Sdk activation failed : ${e.code} - ${e.message}";
@@ -85,7 +91,7 @@ Future<void> activate() async {
 ```
 
 3. To start the capture of a document, you have to call the `start()` method with an `IdcheckioParams` object. You will receive the result in an `IdcheckioResult` object.
-```java
+```dart
   final IDCheckioParams paramsID = IDCheckioParams(
     IDCheckioParamsBuilder()
       ..docType = DocumentType.ID
@@ -120,7 +126,7 @@ Future<void> activate() async {
 ```
 
 4. To start an online capture of a document, use the `startOnline()` method. You will receive the result in an `IdcheckioResult` object.
-```java
+```dart
   final IDCheckioParams paramsLiveness = IDCheckioParams(
       IDCheckioParamsBuilder()
             ..docType = DocumentType.LIVENESS
@@ -144,7 +150,7 @@ Future<void> activate() async {
 ```
 
 5. If you don't want to capture but just analyze a document, you can use the `analyze()` method. You will receive the result in an `IdcheckioResult` object.
-```java  
+```dart
 Future<void> analyze(IDCheckioParams params, IDCheckioResult? result) async{
     String capture;
     try {

@@ -16,6 +16,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  final _activationToken = "YOUR_ACTIVATION_TOKEN";
   bool _sdkActivated = false;
   IDCheckioResult? _captureResult;
   late ParamsListItem _selectedItem;
@@ -44,8 +45,7 @@ class _MyAppState extends State<MyApp> {
     bool activationStatus = false;
     try {
       await IDCheckio.activate(
-          licenceFilename: "license",
-          environment: Environment.DEMO,
+          idToken: _activationToken,
           disableAudioForLiveness: true,
           extractData: true);
       activationStatus = true;

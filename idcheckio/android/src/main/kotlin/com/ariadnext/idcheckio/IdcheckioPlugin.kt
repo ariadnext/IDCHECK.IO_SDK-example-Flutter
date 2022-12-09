@@ -7,7 +7,6 @@ import android.net.Uri
 import android.util.Log
 import androidx.annotation.NonNull
 import com.ariadnext.idcheckio.sdk.bean.OnlineContext
-import com.ariadnext.idcheckio.sdk.bean.SdkEnvironment
 import com.ariadnext.idcheckio.sdk.component.Idcheckio
 import com.ariadnext.idcheckio.sdk.interfaces.ErrorMsg
 import com.ariadnext.idcheckio.sdk.interfaces.IdcheckioCallback
@@ -40,11 +39,10 @@ class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRe
             ACTIVATE -> {
                 this.call = call
                 Idcheckio.activate(
-                        licenseFilename = call.argument<String?>(LICENSE) ?: "",
-                        activity = activity,
+                        idToken = call.argument<String?>(IDTOKEN) ?: "",
+                        context = context,
                         callback = idcheckioCallback,
                         disableAudioForLiveness = call.argument<Boolean?>(DISABLE_AUDIO) ?: true,
-                        environment = SdkEnvironment.valueOf(call.argument<String?>(ENVIRONMENT) ?: "PROD"),
                         extractData = call.argument<Boolean>(EXTRACT_DATA) ?: true
                 )
             }
@@ -132,7 +130,7 @@ class IdcheckioPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRe
                 result?.success(null)
             } else {
                 /* Activation is KO */
-                result?.error(error?.type?.name, error?.message, null)
+                result?.error(error?.type?.name ?: "", error?.message, null)
             }
         }
     }

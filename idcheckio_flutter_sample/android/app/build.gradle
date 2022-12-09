@@ -26,7 +26,7 @@ apply plugin: 'kotlin-android'
 apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 32
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
@@ -39,28 +39,18 @@ android {
     defaultConfig {
         applicationId "com.ariadnext.idcheckio.sample.flutter"
         minSdkVersion 21
-        targetSdkVersion 30
+        targetSdkVersion 32
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
 
-    signingConfigs {
-        release {
-            storeFile file("$YOUR_TRUSTSTORE")
-            storePassword "password"
-            keyAlias "key"
-            keyPassword "password"
-        }
-    }
-
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            signingConfig signingConfigs.debug
             shrinkResources true
             minifyEnabled true
         }
         debug {
-            signingConfig signingConfigs.release
             minifyEnabled false
         }
     }

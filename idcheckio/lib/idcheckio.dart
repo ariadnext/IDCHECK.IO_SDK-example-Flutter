@@ -7,11 +7,10 @@ import 'package:flutter/services.dart';
 class IDCheckio {
   static const MethodChannel _channel = const MethodChannel('idcheckio');
 
-  static Future<void> activate({required String licenceFilename, required Environment environment, bool? disableAudioForLiveness, bool? extractData}) async {
+  static Future<void> activate({required String idToken, bool? disableAudioForLiveness, bool? extractData}) async {
     try {
       await _channel.invokeMethod('activate', <String, dynamic>{
-        'license': licenceFilename,
-        'environment': environment.name(),
+        'idToken': idToken,
         'disableAudioForLiveness': disableAudioForLiveness,
         'extractData': extractData
       });
@@ -163,8 +162,6 @@ class IDCheckioParamsBuilder {
 /// Enum
 ///
 
-enum Environment { DEMO, PROD }
-
 enum DocumentType { DISABLED, ID, LIVENESS, A4, FRENCH_HEALTH_CARD, BANK_CHECK, OLD_DL_FR, PHOTO, VEHICLE_REGISTRATION, SELFIE }
 
 enum IDCheckioOrientation { PORTRAIT, LANDSCAPE }
@@ -249,12 +246,6 @@ extension CISTypeName on CISType {
 }
 
 extension CheckTypeName on CheckType {
-  String name() {
-    return toString().split(".").last;
-  }
-}
-
-extension EnvironmentName on Environment {
   String name() {
     return toString().split(".").last;
   }

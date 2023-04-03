@@ -122,20 +122,25 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
     }
     
     func resultCompletion(result: (Result<IdcheckioResult?, Error>)) {
-        let rootViewController = UIApplication.shared.windows.first?.rootViewController
-        rootViewController?.dismiss(animated: true)
-        var jsonResult = ""
-        switch result {
-        case .success(let result):
-            if let result = result {
-                jsonResult += result.toJson()
-            }
-        case .failure(let error):
-            if let error = error as? IdcheckioError {
-                flutterResult?(FlutterError(code: "CAPTURE_FAILED", message: error.toJson(), details: nil))
-            }
+        DispatchQueue.main.async {
+            let rootViewController = UIApplication.shared.windows.first?.rootViewController
+            rootViewController?.dismiss(animated: true, completion: {
+                DispatchQueue.main.async {
+                    var jsonResult = ""
+                    switch result {
+                    case .success(let result):
+                        if let result = result {
+                            jsonResult += result.toJson()
+                        }
+                    case .failure(let error):
+                        if let error = error as? IdcheckioError {
+                            self.flutterResult?(FlutterError(code: "CAPTURE_FAILED", message: error.toJson(), details: nil))
+                        }
+                    }
+                    self.flutterResult?(jsonResult)
+                }
+            })
         }
-        flutterResult?(jsonResult)
     }
     
     func launchSession(online: Bool, onlineContext: OnlineContext? = nil) {

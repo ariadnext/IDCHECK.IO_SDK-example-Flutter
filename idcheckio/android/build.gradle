@@ -36,15 +36,15 @@ android {
     }
 
     defaultConfig {
-        versionName '7.0.0'
-        versionCode 202210110
+        versionName '7.1.0'
+        versionCode 202304030
         minSdkVersion 21
     }
 }
 
 dependencies {
     implementation "androidx.appcompat:appcompat:$appcompat_version"
-    implementation('com.ariadnext.android.idcheckio:sdk:7.0.0@aar') {
+    implementation('com.ariadnext.android.idcheckio:sdk:7.1.0@aar') {
         transitive = true
     }
 }

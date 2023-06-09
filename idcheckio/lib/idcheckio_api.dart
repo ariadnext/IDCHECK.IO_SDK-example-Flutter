@@ -18,6 +18,7 @@ class IDCheckioParams {
   final Language? language;
   final int? manualButtonTimer;
   final FeedbackLevel? feedbackLevel;
+  final CaptureMode? captureMode;
   final bool? adjustCrop;
   final FileSize? maxPictureFilesize;
   final bool? confirmAbort;
@@ -35,6 +36,7 @@ class IDCheckioParams {
         language = builder.language,
         manualButtonTimer = builder.manualButtonTimer,
         feedbackLevel = builder.feedbackLevel,
+        captureMode = builder.captureMode,
         adjustCrop = builder.adjustCrop,
         maxPictureFilesize = builder.maxPictureFilesize,
         confirmAbort = builder.confirmAbort,
@@ -69,6 +71,7 @@ class IDCheckioParams {
     'Language': language?.name(),
     'ManualButtonTimer': manualButtonTimer,
     'FeedbackLevel': feedbackLevel?.name(),
+    'CaptureMode': captureMode?.name(),
     'AdjustCrop': adjustCrop,
     'MaxPictureFilesize': maxPictureFilesize?.name(),
     'ConfirmAbort': confirmAbort,
@@ -93,6 +96,7 @@ class IDCheckioParamsBuilder {
   FeedbackLevel? feedbackLevel;
   bool? adjustCrop;
   FileSize? maxPictureFilesize;
+  CaptureMode? captureMode;
   String? token;
   bool? confirmAbort;
   OnlineConfig? onlineConfig;
@@ -170,7 +174,9 @@ class OnlineConfig {
   }
 }
 
-enum Language { fr, en, pl, es, ro, cs, pt, de, it, nl, ar }
+enum CaptureMode { CAMERA, PROMPT, UPLOAD }
+
+enum Language { fr, en, pl, es, ro, cs, pt, de, it, nl, ar, uk, sk, hu }
 
 enum FeedbackLevel { ALL, GUIDELINE, ERROR }
 
@@ -191,6 +197,12 @@ extension FileSizeName on FileSize {
 }
 
 extension FeedbackLevelName on FeedbackLevel {
+  String name() {
+    return toString().split(".").last;
+  }
+}
+
+extension CaptureModeName on CaptureMode {
   String name() {
     return toString().split(".").last;
   }

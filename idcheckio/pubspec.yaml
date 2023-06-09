@@ -1,6 +1,6 @@
 name: idcheckio
 description: A flutter plugin which simplify the integration of the IDCheck.io SDK.
-version: 7.1.0
+version: 7.1.4
 homepage: https://www.ariadnext.com/
 
 environment:

@@ -71,6 +71,7 @@ final IDCheckioParams paramsIban = IDCheckioParams(IDCheckioParamsBuilder()
   ..confirmationType = ConfirmationType.DATA_OR_PICTURE
   ..orientation = IDCheckioOrientation.PORTRAIT
   ..useHd = true
+  ..captureMode = CaptureMode.PROMPT
   ..onlineConfig = OnlineConfig(cisType: CISType.IBAN));
 
 final IDCheckioParams paramsAttachment = IDCheckioParams(IDCheckioParamsBuilder()

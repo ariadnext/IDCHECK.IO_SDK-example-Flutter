@@ -25,26 +25,22 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 32
-
-    kotlinOptions {
-        jvmTarget = '1.8'
-    }
+    compileSdkVersion 33
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
 
     defaultConfig {
-        versionName '7.1.0'
-        versionCode 202304030
+        versionName '7.1.4'
+        versionCode 202306070
         minSdkVersion 21
     }
 }
 
 dependencies {
     implementation "androidx.appcompat:appcompat:$appcompat_version"
-    implementation('com.ariadnext.android.idcheckio:sdk:7.1.0@aar') {
+    implementation('com.ariadnext.android.idcheckio:sdk:7.1.4@aar') {
         transitive = true
     }
 }

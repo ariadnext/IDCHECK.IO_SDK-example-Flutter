@@ -100,6 +100,7 @@ public class SwiftIdcheckioPlugin: NSObject, FlutterPlugin {
         sdkParams.side2Extraction = extractionSide2
         extraParameters.language = Language(rawValue: params["Language"] as? String ?? "")
         extraParameters.feedbackLevel = FeedbackLevel(rawValue: params["FeedbackLevel"] as? String ?? "") ?? .all
+        extraParameters.captureMode = CaptureMode(rawValue: params["CaptureMode"] as? String ?? "") ?? .camera
         extraParameters.maxPictureFilesize = FileSize(rawValue: params["MaxPictureFilesize"] as? String ?? "")
         extraParameters.adjustCrop = params["AdjustCrop"] as? Bool ?? false
         extraParameters.confirmAbort = params["ConfirmAbort"] as? Bool ?? false

@@ -1,5 +1,6 @@
 package com.example.idcheckio
 
+import com.ariadnext.idcheckio.sdk.bean.CaptureMode
 import com.ariadnext.idcheckio.sdk.bean.ConfirmationType
 import com.ariadnext.idcheckio.sdk.bean.DataRequirement
 import com.ariadnext.idcheckio.sdk.bean.DocumentType
@@ -48,6 +49,7 @@ object ParametersUtil {
         json.opt(LANGUAGE)?.takeIf { it.toString() != "null" }?.let { idcheckioView.language(Language.valueOf(it.toString())) }
         json.opt(MANUAL_BUTTON_TIMER)?.takeIf { it.toString() != "null" }?.let { idcheckioView.manualButtonTimer(it as Int) }
         json.opt(FEEDBACK_LEVEL)?.takeIf { it.toString() != "null" }?.let { idcheckioView.feedbackLevel(FeedbackLevel.valueOf(it.toString())) }
+        json.opt(CAPTURE_MODE)?.takeIf { it.toString() != "null" }?.let { idcheckioView.captureMode(CaptureMode.valueOf(it.toString())) }
         json.opt(ADJUST_CROP)?.takeIf { it.toString() != "null" }?.let { idcheckioView.adjustCrop(it as Boolean) }
         json.opt(MAX_PICTURE_FILESIZE)?.takeIf { it.toString() != "null" }?.let { idcheckioView.maxPictureFilesize(FileSize.valueOf(it.toString())) }
         json.opt(CONFIRM_ABORT)?.takeIf { it.toString() != "null" }?.let { idcheckioView.confirmAbort(it as Boolean) }
